@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><meta name="referrer" content="strict-origin-when-cross-origin">
+<title>{{site.name}} · {{'App' if channel=='app' else 'Web'}} · Magalu Login</title>
+<link rel="stylesheet" href="/assets/storefront.css">
+</head>
+<body class="{{brand}} {{'mobile' if channel=='app' else 'web'}}">
+<div class="app-frame">
+<div class="delivery"><span>◉ Ambiente de avaliação · WSO2 Identity Server 7.3.18</span><span>Tenant: {{client.tenant_domain}} &nbsp; / &nbsp; {{'APP' if channel=='app' else 'WEB'}}</span></div>
+<header class="main-header">
+ <a href="/" class="logo" aria-label="{{site.name}} início">{% if brand=='netshoes' %}NETSHOES<span class="logo-spark">↗</span>{% elif brand=='magalupay' %}<span>magalu</span><b>pay</b>{% else %}magalu<span class="logo-spark">✳</span>{% endif %}</a>
+ <nav class="nav-links"><a href="#destaques">Início</a><a href="#workflow">Solicitações</a><a href="#security">Segurança</a></nav>
+ <div class="account">
+ {% if principal %}<span class="account-chip"><span class="account-dot"></span> {{principal.display}}</span>
+ <form action="/logout" method="post"><input name="csrf" type="hidden" value="{{csrf}}"><button class="logout" type="submit">Sair <span>↗</span></button></form>
+ {% else %}<a class="login" href="/login">Entrar <span>→</span></a>{% endif %}
+ </div>
+</header>
+<main>
+{% if error %}<div class="notice error"><span>⚠</span><div><b>Operação interrompida</b><p>{{error}}</p></div></div>{% endif %}
+{% if request.query_params.get('approved') %}<div class="notice success">✓ &nbsp; Aprovação confirmada após step-up TOTP no WSO2.</div>{% endif %}
+{% if request.query_params.get('created') %}<div class="notice success">✓ &nbsp; Solicitação criada e enviada à fila de aprovação.</div>{% endif %}
+{% if request.query_params.get('loggedout') %}<div class="notice info">Sessão encerrada somente nesta aplicação. O próximo login pedirá credenciais novamente.</div>{% endif %}
+<section class="hero">
+ <div class="hero-copy"><div class="eyebrow"><span class="eyebrow-line"></span>{{'SUA EXPERIÊNCIA DE COMPRAS' if brand=='magalu' else ('MOVIMENTO TODOS OS DIAS' if brand=='netshoes' else 'SUA VIDA FINANCEIRA MAIS LEVE')}}</div>
+ {% if brand=='magalu' %}<h1>O melhor da vida acontece <em>com você.</em></h1>
+ {% elif brand=='netshoes' %}<h1>Seu próximo passo começa <em>aqui.</em></h1>
+ {% else %}<h1>Sua conta. Seu ritmo. <em>Seu futuro.</em></h1>{% endif %}
+ <p>{{site.caption}} Explore a vitrine de demonstração e acompanhe solicitações com autorização baseada em escopos.</p>
+ <div class="hero-actions"><a href="#destaques" class="hero-btn">Explorar destaques <span>↗</span></a><a href="#workflow" class="hero-secondary">Ver solicitações ↓</a></div>
+ <div class="hero-meta"><span><b>100%</b> ambiente demonstrativo</span><span><b>OIDC</b> OAuth 2.0 + PKCE</span></div>
+ </div>
+ <div class="hero-visual" aria-hidden="true"><div class="orb orb-a"></div><div class="orb orb-b"></div>
+ <div class="visual-card one"><span>MAGALU LOGIN</span><strong>{{'Foco nas suas escolhas' if brand=='magalu' else ('Performance no dia a dia' if brand=='netshoes' else 'Mais segurança para evoluir')}}</strong><small>Identidade protegida · {{channel|upper}}</small></div>
+ <div class="visual-card two"><span>✓</span> Experiência personalizada</div>
+ <div class="visual-star">✦</div>
+ </div>
+</section>
+<div class="trust-strip"><span>◈ Identidade independente</span><span>◇ Web + Mobile</span><span>⬡ Escopos por usuário</span><span>✳ Aprovação com TOTP</span></div>
+<section class="section products" id="destaques"><div class="section-heading"><div><span class="kicker">FEITO PARA VOCÊ</span><h2>{{'Destaques da semana' if brand!='magalupay' else 'Seu painel de serviços'}}</h2></div><span class="subtext">Conteúdo ilustrativo para a PoC</span></div>
+<div class="product-grid">
+{% for title,price,category,symbol in site.products %}<article class="product-card"><div class="product-art art-{{loop.index}}"><span>{{symbol}}</span></div><div class="product-details"><small>{{category}}</small><h3>{{title}}</h3><div class="product-bottom"><b>{{price}}</b><span>Conhecer <span aria-hidden="true">↗</span></span></div></div></article>{% endfor %}
+</div></section>
+<section class="workflow" id="workflow"><div class="workflow-head"><div><span class="kicker">AUTORIZAÇÃO COMPROVÁVEL · RFP §7</span><h2>Solicitações e aprovações</h2><p>Ações reais, autorizadas por escopos devolvidos pelo WSO2. Aprovações exigem autenticação TOTP recente.</p></div><div class="workflow-symbol">⇄</div></div>
+{% if principal %}
+<div class="identity-bar"><div><span class="identity-label">SESSÃO ATIVA NESTE CLIENT</span><strong>{{principal.display}}</strong><small title="{{principal.sub}}">OIDC sub: {{principal.sub[:14]}}…</small></div><div class="scope-list"><span class="scope-title">ESCOPOS CONCEDIDOS</span>{% for scope in principal.scopes %}<span class="scope">{{scope}}</span>{% endfor %}{% if not principal.scopes %}<span class="scope denied">Nenhum escopo liberado</span>{% endif %}</div></div>
+<div class="workflow-grid"><div class="create-box"><span class="panel-count">01 / CRIAR</span><h3>Nova solicitação</h3><p>Usuário com <code>requests:create</code> pode criar; não pode aprovar a própria solicitação.</p>
+{% if SCOPE_CREATE in principal.scopes %}<form action="/requests" method="post"><input type="hidden" name="csrf" value="{{csrf}}"><label>Descrição<input name="subject" required maxlength="120" minlength="4" placeholder="{{site.placeholder}}"></label><label>Valor em reais<input name="amount" required inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" value="250.00" placeholder="250.00"></label><button class="action-primary" type="submit">Criar solicitação <span>→</span></button></form>
+{% else %}<div class="permission-denied">🔒 &nbsp; Sem permissão <code>requests:create</code>. Entre com um usuário criador.</div>{% endif %}
+</div><div class="queue-box"><span class="panel-count">02 / APROVAR</span><h3>Fila de análise</h3><p>O aprovador precisa de <code>requests:approve</code> e TOTP confirmado pelo Identity Server.</p>
+<div class="queue-list">{% for rec in records %}<article class="queue-row"><div><strong>{{rec.subject}}</strong><small>R$ {{rec.amount}} · {{rec.created_at.strftime('%d/%m/%Y %H:%M')}}</small></div><div class="row-action"><span class="queue-status {{rec.status|lower}}">{{'Pendente' if rec.status=='PENDING' else 'Aprovado'}}</span>
+{% if rec.status=='PENDING' and SCOPE_APPROVE in principal.scopes and rec.requested_by_sub != principal.sub %}<form action="/requests/{{rec.request_id}}/approve" method="post"><input type="hidden" name="csrf" value="{{csrf}}"><button class="approve" type="submit">Aprovar com TOTP ↗</button></form>{% endif %}
+</div></article>{% else %}<p class="no-results">Nenhuma solicitação nesta marca. Crie a primeira solicitação.</p>{% endfor %}</div>
+</div></div>
+{% else %}<div class="locked"><div class="locked-icon">♙</div><div><h3>Faça login para continuar</h3><p>Entre nesta aplicação para acessar suas permissões, criar solicitações ou aprová-las.</p><a href="/login" class="action-primary">Entrar com WSO2 <span>→</span></a></div></div>{% endif %}
+</section>
+<section class="security" id="security"><div><span class="kicker">ARQUITETURA DE IDENTIDADE</span><h2>Segurança que acompanha cada ação.</h2><p>Tenant: <b>{{client.tenant_domain}}</b>. Cliente OIDC: <b>{{client.client_id[:12]}}…</b>. Este canal mantém sua própria sessão e nunca aceita cookies de outro storefront como prova de login.</p></div><div class="security-tags"><span>OIDC Code + PKCE</span><span>Pairwise subject</span><span>RBAC / OAuth scopes</span><span>Step-up TOTP</span></div></section>
+</main><footer><span>MAGALU LOGIN · CIAM POC</span><span>Experiência simulada · sem transações reais</span><span>WSO2 IS 7.3.18</span></footer>
+{% if channel=='app' %}<nav class="mobile-tabs" aria-label="Navegação do app"><a href="/">⌂ <small>Início</small></a><a href="#destaques">◇ <small>Explorar</small></a><a href="#workflow">⇄ <small>Pedidos</small></a>{% if principal %}<a href="#workflow">◉ <small>Conta</small></a>{% else %}<a href="/login">◉ <small>Entrar</small></a>{% endif %}</nav>{% endif %}
+</div>
+</body></html>

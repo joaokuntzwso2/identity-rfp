@@ -1,0 +1,27 @@
+# Build an isolated project image on top of the operator-selected UPDATED WSO2 IS image.
+# WSO2 IS 7.3 uses PKCS12 default keystores (client-truststore.p12), not the older JKS default.
+ARG WSO2_BASE
+FROM ${WSO2_BASE}
+USER root
+COPY generated/tls/ca.crt /tmp/magalu-poc-ca.crt
+COPY generated/wso2-db-scripts/postgresql-jdbc.jar /tmp/postgresql-jdbc.jar
+RUN set -eux; \
+    BASE="${WSO2_SERVER_HOME:-/home/wso2carbon/wso2is-7.3.0}"; \
+    SECURITY="$BASE/repository/resources/security"; \
+    TRUSTSTORE="$SECURITY/client-truststore.p12"; \
+    if [ ! -f "$TRUSTSTORE" ]; then \
+      echo "ERROR: WSO2 7.3 PKCS12 client truststore missing: $TRUSTSTORE" >&2; \
+      ls -lah "$SECURITY" >&2 || true; \
+      exit 1; \
+    fi; \
+    keytool -importcert -trustcacerts -noprompt \
+       -alias magalu-poc-sector-ca \
+       -keystore "$TRUSTSTORE" -storetype PKCS12 \
+       -storepass wso2carbon -file /tmp/magalu-poc-ca.crt; \
+    keytool -list -keystore "$TRUSTSTORE" -storetype PKCS12 \
+       -storepass wso2carbon -alias magalu-poc-sector-ca >/dev/null; \
+    install -m 0644 /tmp/postgresql-jdbc.jar \
+       "$BASE/repository/components/lib/postgresql-jdbc.jar"; \
+    chown wso2carbon:wso2 "$BASE/repository/components/lib/postgresql-jdbc.jar"; \
+    rm -f /tmp/magalu-poc-ca.crt /tmp/postgresql-jdbc.jar
+USER wso2carbon

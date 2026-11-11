@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Delegação verificável · Magalu CIAM Lab</title>
+  <link rel="stylesheet" href="/static/m3_exchange_lab.css">
+  <script src="/static/m3_exchange_lab.js" defer></script>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <a href="/" class="logo" aria-label="Voltar ao CIAM Lab"><span class="logo-mark">✳</span> magalu <b>CIAM LAB</b></a>
+    <nav aria-label="Navegação do laboratório">
+      <a href="/">Visão geral</a><a href="/pairwise">Identificadores</a><a href="/m3/consent">Consentimento</a>
+      <a href="/m3/exchange" aria-current="page">Token Exchange</a>
+    <a href="/m3/native-consent">Native Consent</a><a href="/m3/isolation">Tenant Isolation</a></nav>
+    <span class="environment">LAB · WSO2 IS 7.3.18</span>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="headline">
+      <div class="hero-pattern"></div>
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="eyebrow-rule"></span> RFP MAGALU LOGIN / SEÇÃO 7.2 · DEMONSTRAÇÃO 5</p>
+        <h1 id="headline">Ana mantém a identidade.<br><em>Bruno recebe só o acesso necessário.</em></h1>
+        <p class="subtitle">Acompanhe uma delegação real entre dois usuários WSO2. Três testes, uma prova: o Token Exchange deve preservar quem é quem, reduzir privilégios e impedir uma aprovação indevida.</p>
+        <div class="hero-meta"><span>RFC 8693</span><span>JWT assinado</span><span>Controle por escopos</span><span><i></i> Ambiente local</span></div>
+      </div>
+      <div class="hero-aside" aria-label="Estado da validação">
+        <p class="aside-label">VEREDITO TÉCNICO</p>
+        <strong id="hero-verdict" class="verdict">Ainda não validado</strong>
+        <span id="hero-subtitle">Execute os testes para obter evidência real do WSO2.</span>
+        <div class="metric"><span>Testes comprovados</span><b id="hero-score">0 / 3</b></div>
+      </div>
+    </section>
+
+    <section class="section-intro">
+      <div><p class="section-kicker">01 / CONTEXTO</p><h2>A história por trás de um token</h2></div>
+      <p>Não se trata de gerar qualquer JWT. Precisamos provar que a autoridade de Ana não aumenta quando Bruno atua em nome dela. A decisão vem de WSO2, não de uma simulação no frontend.</p>
+    </section>
+
+    <section class="actors" aria-label="Participantes da delegação">
+      <article class="actor-card ana">
+        <div class="actor-top"><span class="avatar">A</span><span class="actor-type">PROPRIETÁRIA DO RECURSO</span></div>
+        <h3>Ana Magalu</h3>
+        <p>O <b>subject</b> original. Autoriza a leitura do recurso e é identificada pelo <code>sub</code> do token final.</p>
+        <div class="chips"><span>requests:read</span><span>requests:create</span></div>
+        <div class="actor-state"><span class="signal" id="ana-signal"></span><span id="ana-state">Verificando captura…</span></div>
+      </article>
+      <div class="connection" aria-hidden="true"><span class="arrow-line"></span><span class="connection-label">delegação rastreável</span><span class="arrow-line right"></span></div>
+      <article class="actor-card bruno">
+        <div class="actor-top"><span class="avatar">B</span><span class="actor-type">ATUANTE / DELEGADO</span></div>
+        <h3>Bruno Seller</h3>
+        <p>O <b>actor</b> da operação. Sua identidade deve aparecer no campo <code>act.sub</code>, sem transferir direitos de aprovação de Ana.</p>
+        <div class="chips"><span>requests:approve</span><span>JWT de ator verificado</span></div>
+        <div class="actor-state"><span class="signal" id="bruno-signal"></span><span id="bruno-state">Verificando captura…</span></div>
+      </article>
+    </section>
+
+    <div class="engine-bridge"><span>JWTs capturados por login real</span><span class="bridge-path">↓</span><span class="engine-tag">WSO2 · /oauth2/token</span><span class="bridge-path">↓</span><span>Token delegado restrito a <code>requests:read</code></span></div>
+
+    <section class="control-panel" aria-labelledby="run-heading">
+      <div class="panel-head"><div><p class="section-kicker">02 / EXECUÇÃO GUIADA</p><h2 id="run-heading">Execute a prova</h2><p>O backend usa os JWTs privados capturados no Mac. Nenhum token ou segredo é enviado ao navegador.</p></div><span class="lab-only"><span class="signal ready"></span> OPERAÇÃO LOCAL</span></div>
+      <div class="controls">
+        <label class="field"><span>CHAVE DE OPERADOR DO LAB</span><input id="operator-key" type="password" autocomplete="off" spellcheck="false" placeholder="Valor de DEMO_OPERATOR_KEY no .env"><small>Usada somente nesta requisição. Não é salva pelo navegador.</small></label>
+        <label class="field"><span>AUDIENCE DA API <i>verificado pelo WSO2</i></span><input id="audience" type="text" autocomplete="off" spellcheck="false" placeholder="Ex.: urn:magalu:poc:requests" maxlength="160"><small id="audience-registration">Aguardando confirmação do cadastro no WSO2.</small></label>
+      </div>
+      <div class="action-bar"><button class="primary" id="run-tests" type="button"><span>▶</span> Executar 3 testes reais</button><button class="secondary" id="refresh-status" type="button">Atualizar estado</button><a class="download" id="download-evidence" href="/api/m3/exchange/evidence">Exportar evidência JSON <span>↗</span></a></div>
+      <div class="notice" role="status" id="lab-notice">Aguardando leitura dos tokens locais e do último relatório.</div>
+    </section>
+
+    <section class="section-intro testing-intro">
+      <div><p class="section-kicker">03 / EVIDÊNCIA</p><h2>Três atos. Nenhuma conclusão presumida.</h2></div>
+      <p>Os resultados vêm do endpoint de token, da validação criptográfica dos JWTs e das decisões HTTP do resource server local.</p>
+    </section>
+
+    <section class="tests-grid" aria-label="Cenários de RFC 8693">
+      <article class="test-card" data-test="subject_only_read">
+        <div class="test-heading"><span class="test-index">01</span><span class="test-state" data-status>AGUARDANDO</span></div>
+        <h3>Primeiro, somente Ana.</h3><p>A identidade original tenta trocar seu JWT por outro limitado à leitura. Isso isola problemas básicos de confiança, grant e escopos.</p>
+        <div class="test-facts"><div><span>RESULTADO HTTP</span><strong data-http>—</strong></div><div><span>JWT ASSINADO</span><strong data-signature>—</strong></div><div><span>ESCOPO REDUZIDO</span><strong data-scope>—</strong></div></div>
+        <div class="test-detail" data-detail>Nenhuma chamada executada.</div>
+      </article>
+      <article class="test-card featured" data-test="delegated_read">
+        <div class="test-heading"><span class="test-index">02</span><span class="test-state" data-status>AGUARDANDO</span></div>
+        <h3>Agora, Bruno age por Ana.</h3><p>WSO2 recebe <code>subject_token</code> e <code>actor_token</code>. O token final deve manter <code>sub=Ana</code>, registrar <code>act.sub=Bruno</code> e permitir só leitura.</p>
+        <div class="test-facts"><div><span>RESULTADO HTTP</span><strong data-http>—</strong></div><div><span>ACTOR PRESERVADO</span><strong data-signature>—</strong></div><div><span>ESCOPO REDUZIDO</span><strong data-scope>—</strong></div></div>
+        <div class="test-detail" data-detail>Este é o teste central do RFP.</div>
+      </article>
+      <article class="test-card" data-test="escalation_rejected">
+        <div class="test-heading"><span class="test-index">03</span><span class="test-state" data-status>AGUARDANDO</span></div>
+        <h3>O limite não pode ser ultrapassado.</h3><p>Bruno pede <code>requests:approve</code> em nome de Ana. Mesmo que o WSO2 responda HTTP 200, a API protegida deve validar o JWT e recusar a aprovação sem o escopo.</p>
+        <div class="test-facts"><div><span>RESULTADO HTTP</span><strong data-http>—</strong></div><div><span>ESCOPO INDEVIDO</span><strong data-signature>—</strong></div><div><span>PROTEÇÃO</span><strong data-scope>—</strong></div></div>
+        <div class="test-detail" data-detail>Precisamos confirmar assinatura, <code>sub</code>, <code>act.sub</code>, escopos emitidos e uma resposta HTTP 403 por falta de permissão na API.</div>
+      </article>
+    </section>
+
+    <section class="resource-proof" aria-labelledby="resource-heading">
+      <div class="resource-heading"><div><p class="section-kicker">04 / PROVA NO RESOURCE SERVER</p><h2 id="resource-heading">Um token real. Duas portas. Dois resultados.</h2>
+      <p>A API usa o JWT real devolvido pelo WSO2 e não confia no resultado visual do OAuth: ela revalida assinatura, issuer, validade, audience e escopos <strong>a cada chamada</strong>. Sem sessão do portal e sem autorização no frontend.</p></div>
+      <span class="resource-label" id="resource-mode">Verificando audience…</span></div>
+      <div class="resource-cards">
+        <article class="resource-card"><div class="resource-symbol good">✓</div><div><p class="resource-eyebrow">PORTA 1 · LEITURA PERMITIDA</p><h3>Ana pode consultar</h3><p>JWT delegado de Ana + Bruno, somente <code>requests:read</code>. A API deve devolver <strong>HTTP 200</strong>.</p><div class="resource-result"><span>HTTP <b id="resource-read-http">—</b></span><span>DECISÃO <b id="resource-read-decision">PENDENTE</b></span><span>JWT + AUDIENCE <b id="resource-read-valid">—</b></span></div><small id="resource-read-reason">Sem teste executado.</small></div></article>
+        <article class="resource-card"><div class="resource-symbol deny">×</div><div><p class="resource-eyebrow">PORTA 2 · APROVAÇÃO PROIBIDA</p><h3>Bruno não pode ampliar Ana</h3><p>Token devolvido na tentativa de escalada, validado pela própria API. Sem <code>requests:approve</code>, a resposta correta é <strong>HTTP 403</strong>.</p><div class="resource-result"><span>HTTP <b id="resource-approve-http">—</b></span><span>DECISÃO <b id="resource-approve-decision">PENDENTE</b></span><span>JWT + AUDIENCE <b id="resource-approve-valid">—</b></span></div><small id="resource-approve-reason">Sem teste executado.</small></div></article>
+      </div>
+      <div class="audience-note" id="audience-note">Audience dedicado ao recurso ainda não verificado. O fallback do Client ID é apenas para evidência local; não é aprovação final da vinculação a uma API.</div>
+      <p class="resource-disclaimer">A operação de aprovação é uma <b>sonda de autorização</b>, sem gravação na base de solicitações. A aprovação funcional com TOTP pertence ao Milestone 2.</p>
+    </section>
+
+    <section class="evidence-box">
+      <div class="evidence-heading"><div><p class="section-kicker">05 / INSPEÇÃO</p><h2>O que o WSO2 realmente devolveu</h2></div><span class="small-note">Dados saneados · sem tokens e segredos</span></div>
+      <div class="evidence-layout">
+        <div class="fact-sheet" id="verified-facts"><div class="fact-row"><span>Issuer</span><b>—</b></div><div class="fact-row"><span>Assinatura do subject</span><b>—</b></div><div class="fact-row"><span>Assinatura do actor</span><b>—</b></div><div class="fact-row"><span>Audience vinculado</span><b>—</b></div><div class="fact-row"><span>Escopos originais</span><b>—</b></div></div>
+        <div class="diagnostic"><p class="diag-label">DIAGNÓSTICO DE PRÓXIMO PASSO</p><p id="diagnosis">Capture Ana e Bruno e execute a prova. Se o servidor devolver um erro, a causa aparecerá aqui.</p><div class="diag-foot">Para rastrear um HTTP 400, compare os erros <code>invalid_scope</code>, <code>invalid_grant</code>, <code>unauthorized_client</code> e <code>invalid_target</code>. Nunca publique JWTs.</div></div>
+      </div>
+    </section>
+    <section class="footer-story"><span class="footer-index">PRINCÍPIO ARQUITETURAL</span><p><b>Delegar não é transferir todos os privilégios.</b> O resultado só é aprovado quando a delegação legítima funciona, o ator é rastreável e uma escalada indevida é rejeitada.</p><div class="footer-links"><a href="/m3/consent">← Validação de consentimento</a><a href="/pairwise">Identificadores pairwise →</a></div></section>
+  </main>
+  <footer>Magalu CIAM Technical Evaluation · Ambiente de desenvolvimento local · Nenhum token de acesso é renderizado nesta página.</footer>
+</div>
+</body>
+</html>

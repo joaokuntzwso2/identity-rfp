@@ -1,0 +1,78 @@
+{% extends 'base.html' %}{% block title %}Centro de Evidências{% endblock %}{% block content %}
+<div class="eyebrow">MAGALU LOGIN / SANDBOX DE AVALIAÇÃO</div>
+<h1>Uma identidade.<br><em>Seis experiências independentes.</em></h1>
+<p class="lead">Acompanhe em tempo real as sessões de Magalu Retail, Netshoes e MagaluPay. Cada experiência Web ou Mobile tem seu próprio cliente OIDC, cookie e controle de login e logout.</p>
+<div class="stats"><div class="stat"><b>02</b><span>root tenants WSO2</span></div><div class="stat"><b>03</b><span>marcas de demonstração</span></div><div class="stat"><b>06</b><span>aplicações independentes</span></div><div class="stat"><b id="logged-in-count">—</b><span>sessões autenticadas neste navegador</span></div></div>
+<section class="root-map" aria-label="Fronteiras dos root tenants">
+  <div class="root-group"><small>ROOT TENANT 01 · magalu.demo</small><h3>Magalu Commerce</h3><div class="root-pills"><span>Magalu Retail · Setor A</span><span>Netshoes · Setor B</span><span>4 clientes OIDC</span></div></div>
+  <div class="root-group fintech"><small>ROOT TENANT 02 · magalupay.demo</small><h3>MagaluPay</h3><div class="root-pills"><span>MagaluPay · Setor C</span><span>2 clientes OIDC</span></div></div>
+</section>
+<p class="root-map-foot">Os root tenants são independentes. Autenticação em uma aplicação não cria uma sessão em outra aplicação.</p>
+<section class="section-title">
+  <div><span class="eyebrow">ESTADO DE LOGIN · LEITURA SOMENTE</span><h2>Suas seis aplicações</h2></div>
+  <button type="button" class="dashboard-refresh" id="session-refresh">↻ Atualizar status</button>
+</section>
+<div class="monitor-bar"><span class="monitor-dot" aria-hidden="true"></span><span id="dashboard-message" aria-live="polite">Consultando cada aplicação de forma independente…</span><span class="monitor-time" id="dashboard-updated"></span></div>
+<div class="storefront-monitor-grid" id="storefront-monitor">
+  {% for brand, label, tenant, origin in [('magalu','Magalu Retail','magalu.demo','retail'),('netshoes','Netshoes','magalu.demo','sports'),('magalupay','MagaluPay','magalupay.demo','pay')] %}
+    {% for channel, channel_label, port in [('web','Web', {'magalu':8181,'netshoes':8183,'magalupay':8185}[brand]),('app','Mobile',{'magalu':8182,'netshoes':8184,'magalupay':8186}[brand])] %}
+      <article class="monitor-card {{ origin }}" data-session-key="{{brand}}:{{channel}}">
+        <div class="monitor-card-top"><span class="monitor-brand">{{label}}</span><span class="monitor-state checking" data-status aria-live="polite">Verificando…</span></div>
+        <div class="monitor-channel">{{channel_label}}</div>
+        <p class="monitor-tenant">{{tenant}} · canal {{channel}}</p>
+        <div class="monitor-card-bottom"><span>Cliente OIDC dedicado</span><a href="http://localhost:{{port}}" rel="noreferrer">Abrir aplicação ↗</a></div>
+      </article>
+    {% endfor %}
+  {% endfor %}
+</div>
+<div class="note"><b>Como funciona:</b> o painel consulta cada storefront utilizando apenas o cookie de sessão daquela aplicação, sem compartilhar tokens, permissões ou identidade entre marcas. O logout é sempre feito dentro da própria aplicação. Utilize <b>localhost</b> em todas as abas, não <code>127.0.0.1</code>.</div>
+<section class="section-title"><div><span class="eyebrow">EVIDÊNCIAS DO RFP / SEÇÃO 7</span><h2>Validação técnica</h2></div></section>
+<div class="features">
+<article><span class="feature-n">7.2 / CONSENT V2</span><h3>Consentimento nativo WSO2 + Ledger</h3><p>Propósitos, consent records nativos, dupla validação e revogação verificada no WSO2.</p><a class="btn primary" href="/m3/native-consent">Abrir Native Consent &amp; Compliance →</a></article>
+  <article><span class="feature-n">7.2 / 01</span><h3>Continuidade e segregação de <code>sub</code></h3><p>Acompanhe os seis logins. Para comprovar pairwise, compare os <code>sub</code> de cada <code>/api/session</code> com a mesma pessoa autenticada.</p><a class="btn primary" href="/pairwise">Abrir matriz de sub →</a></article>
+  <article><span class="feature-n">7.2 / SESSÕES</span><h3>Autenticação independente</h3><p>Login, logout e reautenticação são individuais por storefront. Este painel não é um sétimo cliente OIDC.</p><div class="status">PRONTO PARA TESTE INTERATIVO</div></article>
+  <article><span class="feature-n">7.3 / M2M</span><h3>Emissão de tokens</h3><p>Emissão via WSO2 Client Credentials, com evidências de Token Exchange e carga ainda sujeitas à validação.</p><a href="/m2m">Abrir bancada M2M ↗</a></article>
+</div>
+{% if not manifest %}<div class="alert"><b>Bootstrap pendente:</b> manifesto indisponível. Execute o bootstrap no ambiente isolado.</div>{% endif %}
+<script>
+(function () {
+  const statuses = {checking:'Verificando…',authenticated:'Autenticado',loggedout:'Não autenticado',offline:'Indisponível'};
+  const cards = document.querySelectorAll('[data-session-key]');
+  const count = document.getElementById('logged-in-count');
+  const message = document.getElementById('dashboard-message');
+  const updated = document.getElementById('dashboard-updated');
+  const refresh = document.getElementById('session-refresh');
+  let fetching = false;
+  async function update() {
+    if (fetching) return;
+    fetching = true;
+    refresh.disabled = true;
+    try {
+      const response = await fetch('/api/storefront-status', {credentials:'same-origin',cache:'no-store'});
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const data = await response.json();
+      const indexed = Object.fromEntries(data.storefronts.map(x=>[x.brand+':'+x.channel,x]));
+      cards.forEach(card=>{
+        const value = indexed[card.dataset.sessionKey];
+        const status = !value || !value.available ? 'offline' : (value.authenticated ? 'authenticated':'loggedout');
+        const el=card.querySelector('[data-status]');
+        el.className='monitor-state '+status;
+        el.textContent=statuses[status];
+      });
+      count.textContent = String(data.authenticated_count);
+      message.textContent = 'Sessões consultadas separadamente · Nenhum login ou logout realizado';
+      updated.textContent = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    } catch (error) {
+      message.textContent = 'Não foi possível consultar os storefronts. Verifique os containers.';
+      cards.forEach(card=>{const el=card.querySelector('[data-status]');el.className='monitor-state offline';el.textContent=statuses.offline;});
+      count.textContent = '—';
+    } finally {fetching=false;refresh.disabled=false;}
+  }
+  refresh.addEventListener('click',update);
+  window.addEventListener('focus',update);
+  document.addEventListener('visibilitychange',()=>{if (!document.hidden) update();});
+  update();
+  setInterval(()=>{if (!document.hidden) update();},15000);
+})();
+</script>
+{% endblock %}

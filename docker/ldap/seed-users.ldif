@@ -1,0 +1,14 @@
+dn: ou=people,dc=example,dc=test
+objectClass: organizationalUnit
+ou: people
+
+dn: uid=ldap.seller,ou=people,dc=example,dc=test
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: LDAP Seller
+sn: Seller
+uid: ldap.seller
+mail: ldap.seller@example.test
+userPassword: DemoLDAP_2026_ChangeMe!

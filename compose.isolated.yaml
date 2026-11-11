@@ -1,0 +1,57 @@
+# All resources are project-scoped. Do not reuse containers/volumes from other demos.
+name: magalu-ciam73-isolated
+services:
+  identity-db:
+    image: postgres:16.6-alpine
+    environment:
+      POSTGRES_USER: ${IS_DB_USER:-wso2}
+      POSTGRES_PASSWORD: ${IS_DB_PASSWORD:?Run setup-isolated.sh}
+      POSTGRES_DB: postgres
+    volumes:
+      - identity-db-data:/var/lib/postgresql/data
+      - ./docker/identity-db/init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+      - ./generated/wso2-db-scripts:/opt/wso2-db-scripts:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+    networks: [poc]
+  is:
+    build:
+      context: .
+      dockerfile: docker/wso2/Dockerfile.isolated
+      args:
+        WSO2_BASE: ${WSO2_IMAGE:?Configure the verified updated WSO2 image}
+    image: magalu-ciam73-s7lab/wso2is:local
+    ports:
+      - "127.0.0.1:${WSO2_HOST_PORT:-9543}:9543"
+    volumes:
+      - ./generated/wso2/deployment.toml:/home/wso2carbon/wso2is-7.3.0/repository/conf/deployment.toml:ro
+      - is-logs:/home/wso2carbon/wso2is-7.3.0/repository/logs
+    depends_on:
+      identity-db: {condition: service_healthy}
+    networks: [poc]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -ksf https://localhost:9543/oauth2/token/.well-known/openid-configuration >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 50
+      start_period: 120s
+  demo:
+    environment:
+      IS_INTERNAL_URL: https://is:9543
+    depends_on:
+      db: {condition: service_healthy}
+      is: {condition: service_healthy}
+  bootstrap:
+    environment:
+      IS_INTERNAL_URL: https://is:9543
+    depends_on:
+      is: {condition: service_healthy}
+      db: {condition: service_healthy}
+      demo: {condition: service_started}
+volumes:
+  identity-db-data: {}
+  is-logs: {}

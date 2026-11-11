@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>Fronteiras entre tenants · Magalu CIAM Lab</title>
+<link rel="stylesheet" href="/static/m3_isolation.css"><script defer src="/static/m3_isolation.js"></script>
+</head><body>
+<header class="topbar"><a class="logo" href="/"><span class="mark">✳</span> magalu <small>IDENTITY LAB</small></a>
+<nav aria-label="Navegação do laboratório"><a href="/">Visão geral</a><a href="/pairwise">Pairwise</a><a href="/m3/consent">Consentimento</a><a href="/m3/exchange">Token Exchange</a><a href="/m3/native-consent">Native Consent</a><a href="/m3/isolation" aria-current="page">Isolamento</a></nav><span class="env">IS 7.3.18 · LAB LOCAL</span></header>
+<main>
+<section class="hero"><div class="hero-copy"><p class="eyebrow">RFP MAGALU · SEÇÃO 7 / CAPÍTULO FINAL DO MILESTONE 3</p>
+<h1>Uma identidade pode compartilhar.<br><em>Uma fronteira não pode desaparecer.</em></h1>
+<p>Três marcas. Dois root tenants. A mesma pessoa de teste pode entrar nos dois ambientes, mas uma autorização no Commerce não vale automaticamente para MagaluPay — nem um JWT do Commerce pode se tornar autoridade no Fintech.</p>
+<div class="hero-pills"><span>Consentimento direcional</span><span>Issuer e audience</span><span>RFC 8693</span><span>Evidência real</span></div></div>
+<div class="hero-verdict"><small>RESULTADO CONSOLIDADO</small><strong id="overall">AINDA NÃO TESTADO</strong><p id="overall-note">Duas provas independentes, uma decisão técnica.</p><div class="scoreline"><span>Consentimento</span><b id="consent-badge">PENDENTE</b></div><div class="scoreline"><span>Token Exchange</span><b id="token-badge">PENDENTE</b></div></div></section>
+
+<section class="section-head"><div><p class="kicker">00 / TOPOLOGIA REAL</p><h2>O mesmo laboratório. Duas autoridades independentes.</h2></div><p>O root tenant é a fronteira de confiança. Netshoes compartilha Commerce; MagaluPay tem seu próprio emissor e suas próprias aplicações.</p></section>
+<div class="tenants"><article class="tenant commerce"><div class="tenant-cap"><span class="tenant-mark">A</span><div><small>ROOT TENANT · COMMERCE</small><h3>magalu.demo</h3></div></div><div class="brand-row"><span class="brand blue">MAGALU</span><span class="brand violet">NETSHOES</span></div><p>O consentimento <b>Magalu → Netshoes</b> exige vínculo direcional e concessão explícita.</p></article><span class="borderline"><b>≠</b><small>FRONTEIRA<br>DE CONFIANÇA</small></span><article class="tenant fintech"><div class="tenant-cap"><span class="tenant-mark">B</span><div><small>ROOT TENANT · FINTECH</small><h3>magalupay.demo</h3></div></div><div class="brand-row"><span class="brand teal">MAGALUPAY</span></div><p>Um login ou um grant no Commerce não concede privilégios neste tenant.</p></article></div>
+
+<section class="control"><div class="control-copy"><p class="kicker">01 / INICIAR A DEMONSTRAÇÃO</p><h2>Prepare o navegador</h2><p>Faça login nas três aplicações no <b>mesmo perfil do navegador</b>, usando sempre <code>localhost</code>. Os estados vêm dos respectivos BFFs, não do bootstrap.</p></div>
+<div class="session-grid"><a href="http://localhost:8181" target="_blank" rel="noopener noreferrer"><span>Magalu Web · 8181</span><b id="session-magalu" class="state waiting">AGUARDANDO</b></a><a href="http://localhost:8183" target="_blank" rel="noopener noreferrer"><span>Netshoes Web · 8183</span><b id="session-netshoes" class="state waiting">AGUARDANDO</b></a><a href="http://localhost:8185" target="_blank" rel="noopener noreferrer"><span>MagaluPay Web · 8185</span><b id="session-magalupay" class="state waiting">AGUARDANDO</b></a></div>
+<div class="prep-chips"><span>JWTs Ana + Bruno: <b id="jwt-ready">VERIFICANDO</b></span><span>Controle Fintech WSO2: <b id="pay-ready">VERIFICANDO</b></span></div>
+<details class="setup-guide"><summary>Preparação técnica — comandos exatos no Mac</summary>
+<p>Estas ações são administrativas ou de login OIDC e ficam fora do navegador por segurança. A execução dos testes e a exportação da evidência são feitas nesta página.</p>
+<div class="setup-list"><div><small>1 · Pré-configurar controle M2M do MagaluPay com audience</small><code>./scripts/prepare-m3-fintech-control.sh</code></div><div><small>2 · Capturar JWT de Ana via login real</small><code>./scripts/m3-local.sh capture-subject --insecure-local</code></div><div><small>3 · Capturar JWT de Bruno via login real</small><code>./scripts/m3-local.sh capture-actor --insecure-local</code></div></div>
+<p>Execute a partir do diretório raiz do projeto. Nunca cole os JWTs, senhas nem o valor da chave de operador no relatório.</p>
+</details>
+<div class="control-footer"><label class="operator"><span>CHAVE DE OPERADOR DO LAB · <code>DEMO_OPERATOR_KEY</code></span><input id="operator-key" type="password" autocomplete="off" spellcheck="false" placeholder="Somente neste navegador · nunca exportada"></label><button class="quiet" id="refresh" type="button">↻ Verificar sessões</button></div><p class="hint">Os dois JWTs previamente capturados, de Ana e Bruno, também são necessários para a prova OAuth. Os tokens e segredos nunca aparecem nesta tela.</p></section>
+
+<section class="section-head"><div><p class="kicker">02 / HISTÓRIA A · CONSENTIMENTO</p><h2>Uma autorização tem origem, destino e validade.</h2></div><p>O mesmo gate da API de compartilhamento é chamado por endpoints HTTP reais. Sem consentimento atual, não há dados.</p></section>
+<div class="journey">
+<article class="act"><span class="index">01</span><div><h3>Criar o vínculo, sem conceder acesso</h3><p>Vincule as sessões autenticadas de Magalu e Netshoes. Também se cria o vínculo reverso, sem grant. Nenhuma permissão é concedida automaticamente.</p><button id="prepare" class="secondary" type="button">Preparar vínculos de teste</button><small id="prepare-status">Aguardando.</small></div></article>
+<article class="act"><span class="index">02</span><div><h3>Ana permite Magalu → Netshoes</h3><p>A concessão pertence ao usuário autenticado na marca de origem. É explícita e registrada no ledger com histórico.</p><label class="check"><input type="checkbox" id="confirm-grant"> Eu, nesta sessão de teste, autorizo o compartilhamento Magalu → Netshoes para o propósito exibido.</label><button id="grant" class="primary" type="button">Conceder consentimento</button><small id="grant-status">Nenhuma concessão executada por esta tela.</small></div></article>
+<article class="act"><span class="index">03</span><div><h3>Atravessar a fronteira</h3><p>Três chamadas HTTP: <b>Netshoes 200</b>, <b>MagaluPay 403</b>, <b>sentido inverso 403</b>. O terceiro tenant não é reconhecido como destinatário deste grant.</p><button id="consent-test" class="primary" type="button">Executar 3 verificações HTTP</button><div class="result-grid"><div class="result"><span>NETSHOES / PERMITIDO</span><b id="consent-netshoes">—</b><small id="consent-netshoes-reason">Pendente</small></div><div class="result"><span>MAGALUPAY / ISOLADO</span><b id="consent-pay">—</b><small id="consent-pay-reason">Pendente</small></div><div class="result"><span>INVERSO / INDEPENDENTE</span><b id="consent-reverse">—</b><small id="consent-reverse-reason">Pendente</small></div></div></div></article>
+<article class="act"><span class="index">04</span><div><h3>Revogar e repetir — acesso removido</h3><p>Um JWT ou sessão existente não reabilita um grant revogado. A API consulta o ledger atualizado em cada chamada.</p><label class="check"><input type="checkbox" id="confirm-revoke"> Confirmo a revogação explícita deste consentimento de teste.</label><button id="revoke" class="secondary" type="button">Revogar consentimento</button><button id="revocation-test" class="secondary" type="button">Retestar acesso após revogação</button><small id="revoke-status">Revogação pendente.</small></div></article>
+</div>
+
+<section class="section-head"><div><p class="kicker">03 / HISTÓRIA B · TOKEN EXCHANGE</p><h2>Dois emissores. Nenhum passe-livre entre tenants.</h2></div><p>O backend primeiro comprova que os dois endpoints funcionam. Só então testa o JWT do Commerce no endpoint e no resource server do MagaluPay.</p></section>
+<div class="oauth-story"><div class="oauth-box blue"><small>ORIGEM</small><h3>Commerce</h3><code>iss = …/t/magalu.demo/…</code><p>JWTs reais de Ana e Bruno</p></div><div class="oauth-arrow"><span>✕</span><small>SEM TRUST EXPLÍCITO</small></div><div class="oauth-box green"><small>DESTINO</small><h3>MagaluPay</h3><code>iss = …/t/magalupay.demo/…</code><p>Exchange client e issuer próprios</p></div></div>
+<div class="token-actions"><div><h3>Validação cross-root</h3><p>Controle positivo de delegação Commerce; Client Credentials no MagaluPay; validação de issuer/audience na API; duas tentativas reais de RFC 8693 no tenant errado.</p><p class="warning">Se o client MagaluPay não emitir um JWT válido, as rejeições cross-root serão classificadas como <b>bloqueadas</b>, não PASS.</p></div><button id="token-test" class="primary" type="button">Executar prova OAuth entre tenants</button></div>
+<div class="token-results"><div><small>CONTROLE · COMMERCE</small><b id="commerce-control">PENDENTE</b></div><div><small>CONTROLE · MAGALUPAY</small><b id="pay-control">PENDENTE</b></div><div><small>RESOURCE SERVER · JWT COMMERCE</small><b id="issuer-denial">PENDENTE</b></div><div><small>EXCHANGE · SUBJECT DE OUTRO ROOT</small><b id="subject-exchange">PENDENTE</b></div><div><small>EXCHANGE · SUBJECT + ACTOR</small><b id="actor-exchange">PENDENTE</b></div></div>
+
+<section class="resource-controls" aria-labelledby="resource-proof-heading">
+  <div class="resource-controls-header">
+    <p class="kicker">03.1 / CONTROLES DO RESOURCE SERVER · HTTP REAL</p>
+    <h3 id="resource-proof-heading">A API MagaluPay confia no emissor certo — e rejeita o errado.</h3>
+    <p>Dois JWTs são verificados pela mesma API. O token válido do próprio MagaluPay deve ser aceito; o JWT do Commerce deve ser rejeitado. Um erro de formato (HTTP 422) nunca conta como isolamento.</p>
+  </div>
+  <div class="resource-controls-grid">
+    <div class="resource-control-card">
+      <small>CONTROLE POSITIVO · TOKEN MAGALUPAY</small>
+      <strong id="pay-own-http">PENDENTE</strong>
+      <span id="pay-own-reason">Aguardando prova OAuth.</span>
+      <span id="pay-own-verification">Assinatura · Issuer · Audience: —</span>
+    </div>
+    <div class="resource-control-card">
+      <small>CONTROLE NEGATIVO · TOKEN COMMERCE</small>
+      <strong id="pay-other-http">PENDENTE</strong>
+      <span id="pay-other-reason">Aguardando prova OAuth.</span>
+      <span id="pay-other-verification">Rejeição por identidade de tenant: —</span>
+    </div>
+  </div>
+  <p class="resource-controls-note" id="resource-controls-note">Nenhum aceite presumido: a prova depende de HTTP 200 (token MagaluPay), HTTP 401 (token Commerce) e validação de issuer/audience no resource server.</p>
+</section>
+
+<section class="evidence"><div><p class="kicker">04 / EVIDÊNCIA E ACEITE</p><h2>Nenhum PASS sem chamadas reais.</h2><p>O resumo diferencia erros de configuração de provas válidas. Eventos de consentimento ficam no PostgreSQL e os resultados saneados ficam em <code>generated/</code>.</p></div><div class="evidence-action"><a class="export" href="/api/m3/isolation/evidence">Exportar relatório JSON saneado ↗</a><p>Sem JWTs, senhas, secrets ou identificadores completos.</p></div></section>
+<details class="raw"><summary>Inspecionar evidência técnica sanitizada</summary><pre id="raw-evidence">Nenhum diagnóstico executado.</pre></details>
+<div class="feedback" id="notice" role="status" aria-live="polite">Autentique as três aplicações e verifique as sessões para iniciar.</div>
+<footer>MAGALU CIAM · WSO2 IS 7.3.18 · RFP SEÇÃO 7 · O isolamento da extensão de consentimento não equivale à certificação da Consent Management v2 nativa.</footer>
+</main></body></html>

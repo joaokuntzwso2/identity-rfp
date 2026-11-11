@@ -1,0 +1,15 @@
+# Local-only development image. Supply the *updated* licensed distribution archive.
+FROM eclipse-temurin:21-jre-jammy
+RUN apt-get update && apt-get install -y --no-install-recommends unzip curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -g 10001 wso2 && useradd -u 10001 -g wso2 -m -d /home/wso2carbon wso2carbon
+COPY generated/distribution/wso2is-updated.zip /tmp/wso2is-updated.zip
+RUN set -eux; mkdir -p /home/wso2carbon; \
+    unzip -q /tmp/wso2is-updated.zip -d /home/wso2carbon; \
+    test -x /home/wso2carbon/wso2is-7.3.0/bin/wso2server.sh || \
+      test -f /home/wso2carbon/wso2is-7.3.0/bin/wso2server.sh; \
+    chown -R wso2carbon:wso2 /home/wso2carbon; \
+    rm -f /tmp/wso2is-updated.zip
+USER wso2carbon
+WORKDIR /home/wso2carbon/wso2is-7.3.0
+CMD ["sh","bin/wso2server.sh"]

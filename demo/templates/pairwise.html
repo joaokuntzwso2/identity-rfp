@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}Evidências Pairwise{% endblock %}
+{% block content %}
+<section class="pw-heading">
+  <div>
+    <div class="eyebrow">MAGALU LOGIN / RFP 7.2.1 · EVIDÊNCIA FUNCIONAL</div>
+    <h1>Uma pessoa.<br><em>Identificadores por marca.</em></h1>
+    <p class="lead">Observe os valores reais de <code>sub</code> das seis aplicações. O painel consulta as sessões autenticadas do seu navegador nos respectivos BFFs — sem simular identificadores, compartilhar tokens ou efetuar login automaticamente.</p>
+  </div>
+  <div class="pw-control">
+    <button class="pw-refresh" id="pw-refresh" type="button">↻ Atualizar evidências</button>
+    <span id="pw-updated" class="pw-updated" aria-live="polite">Ainda não consultado</span>
+  </div>
+</section>
+<div class="pw-overview" aria-label="Resumo das evidências">
+  <div class="pw-stat"><span>SESSÕES OBSERVADAS</span><strong id="pw-count">— / 6</strong><small>Clientes OIDC independentes</small></div>
+  <div class="pw-stat"><span>REGRAS VERIFICADAS</span><strong id="pw-checks">— / 6</strong><small>Continuidade e segregação</small></div>
+  <div class="pw-stat"><span>ESTADO DA DEMONSTRAÇÃO</span><strong id="pw-verdict" class="pw-verdict">CONSULTANDO</strong><small id="pw-verdict-note">Aguardando resposta dos serviços</small></div>
+</div>
+<div class="pw-banner" role="note"><span class="pw-banner-icon">i</span><div><b>Pré-condição do teste:</b> autentique a <b>mesma pessoa</b> nas seis aplicações. Para Magalu e Netshoes, use o mesmo usuário <code>ana.magalu</code> do tenant <code>magalu.demo</code>; MagaluPay usa a conta equivalente no tenant independente. Sem essa confirmação, uma diferença de <code>sub</code> pode ser apenas consequência de pessoas diferentes.</div></div>
+<section class="pw-section">
+  <div class="pw-section-head"><div><span class="eyebrow">01 / IDENTIFICADORES OBSERVADOS</span><h2>Seis clientes, seis evidências de sessão</h2></div><a href="/" class="pw-subtle-link">← Visão geral</a></div>
+  <div class="pw-grid">
+    {% for brand, label, tenant, prefix in [('magalu','Magalu Retail','magalu.demo','retail'),('netshoes','Netshoes','magalu.demo','sports'),('magalupay','MagaluPay','magalupay.demo','finance')] %}
+      {% for channel, channel_label, port in [('web','Web', {'magalu':8181,'netshoes':8183,'magalupay':8185}[brand]),('app','Mobile', {'magalu':8182,'netshoes':8184,'magalupay':8186}[brand])] %}
+      <article class="pw-card {{prefix}}" data-pw-key="{{brand}}:{{channel}}">
+        <div class="pw-card-top"><span class="pw-brand">{{label}}</span><span class="pw-status checking" data-pw-status>Consultando</span></div>
+        <div class="pw-channel">{{channel_label}}</div>
+        <div class="pw-tenant"><span class="pw-dot"></span>{{tenant}}</div>
+        <div class="pw-sub-wrap"><div class="pw-sub-label">SUB · ID TOKEN VALIDADO PELO BFF</div><code data-pw-sub>—</code></div>
+        <div class="pw-card-bottom"><a href="http://localhost:{{port}}" rel="noreferrer">Abrir aplicação ↗</a><span>{{port}}</span></div>
+      </article>
+      {% endfor %}
+    {% endfor %}
+  </div>
+</section>
+<section class="pw-section">
+  <div class="pw-section-head"><div><span class="eyebrow">02 / MATRIZ DE ACEITE</span><h2>Continuidade e segregação</h2></div><span class="pw-hint">PASS / FAIL / PENDENTE</span></div>
+  <div class="pw-comparisons">
+    <div class="pw-comparison-header"><span>CONTINUIDADE · MESMA MARCA, CANAIS DIFERENTES</span><span>ESPERADO</span><span>STATUS</span></div>
+    {% for identifier, text in [('magalu_continuity','Magalu Web × Mobile'),('netshoes_continuity','Netshoes Web × Mobile'),('magalupay_continuity','MagaluPay Web × Mobile')] %}
+    <div class="pw-comparison" data-pw-check="{{identifier}}"><span>{{text}}</span><span class="pw-expected">sub igual (=)</span><span class="pw-result pending" data-pw-result>PENDENTE</span></div>
+    {% endfor %}
+    <div class="pw-comparison-header"><span>SEGREGAÇÃO · MARCAS DIFERENTES</span><span>ESPERADO</span><span>STATUS</span></div>
+    {% for identifier, text in [('magalu_netshoes_separation','Magalu × Netshoes'),('magalu_magalupay_separation','Magalu × MagaluPay'),('netshoes_magalupay_separation','Netshoes × MagaluPay')] %}
+    <div class="pw-comparison" data-pw-check="{{identifier}}"><span>{{text}}</span><span class="pw-expected">sub distinto (≠)</span><span class="pw-result pending" data-pw-result>PENDENTE</span></div>
+    {% endfor %}
+  </div>
+</section>
+<section class="pw-section">
+  <div class="pw-section-head"><div><span class="eyebrow">03 / EVIDÊNCIA EXPORTÁVEL</span><h2>Dados de origem, sem tokens</h2></div></div>
+  <div class="pw-bottom-grid">
+    <div class="pw-info"><h3>Como esta medição funciona</h3><p>O portal encaminha apenas o cookie individual de cada aplicação ao seu próprio backend, dentro da rede Docker. O backend confirma a sessão e retorna o <code>sub</code> previamente obtido de um ID token assinado e validado do WSO2. Nenhum token de acesso, segredo ou senha é retornado ao painel.</p><p>Os resultados são atualizados sob demanda e periodicamente. O relatório não é persistido no servidor central.</p></div>
+    <div class="pw-info"><h3>O que ainda precisa ser demonstrado</h3><p>Igualdade e diferença de valores são <b>evidência funcional</b>, mas não comprovam isoladamente a semântica do protocolo. Para concluir o requisito B-01/B-02, também verifique <code>subject_types_supported</code>, os <code>sector_identifier_uri</code> e que as contas realmente representam a mesma pessoa.</p><a class="pw-data-link" href="/api/pairwise-evidence" target="_blank" rel="noopener">Ver JSON de evidências ↗</a></div>
+  </div>
+</section>
+<div class="pw-footer-status" id="pw-message" role="status" aria-live="polite">Consultando dados reais dos seis storefronts…</div>
+<script>
+(()=>{
+  const states={authenticated:['AUTENTICADO','authenticated'],logged_out:['SEM LOGIN','loggedout'],unavailable:['INDISPONÍVEL','unavailable'],invalid_response:['DADO INVÁLIDO','unavailable'],invalid_cookie:['COOKIE INVÁLIDO','unavailable']};
+  const labels={pass:'PASS',fail:'FAIL',pending:'PENDENTE'};
+  let busy=false;
+  const button=document.getElementById('pw-refresh');
+  const message=document.getElementById('pw-message');
+  async function refresh(){
+    if(busy)return;
+    busy=true;button.disabled=true;
+    try{
+      const response=await fetch('/api/pairwise-evidence',{credentials:'same-origin',cache:'no-store'});
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      const data=await response.json();
+      const byKey=Object.fromEntries(data.storefronts.map(x=>[x.brand+':'+x.channel,x]));
+      document.querySelectorAll('[data-pw-key]').forEach(card=>{
+        const entry=byKey[card.dataset.pwKey];
+        const [label,klass]=states[entry?.status]||['DESCONHECIDO','unavailable'];
+        const badge=card.querySelector('[data-pw-status]');
+        badge.textContent=label;badge.className='pw-status '+klass;
+        const subject=card.querySelector('[data-pw-sub]');
+        subject.textContent=entry?.status==='authenticated'?entry.sub:'—';
+        subject.title=entry?.status==='authenticated'?entry.sub:'';
+      });
+      const checks=Object.fromEntries(data.checks.map(x=>[x.id,x]));
+      document.querySelectorAll('[data-pw-check]').forEach(row=>{
+        const result=row.querySelector('[data-pw-result]');
+        const status=checks[row.dataset.pwCheck]?.status||'pending';
+        result.className='pw-result '+status;
+        result.textContent=labels[status]||'PENDENTE';
+      });
+      document.getElementById('pw-count').textContent=data.authenticated_count+' / 6';
+      document.getElementById('pw-checks').textContent=data.passed_checks+' / 6';
+      const verdict=document.getElementById('pw-verdict');
+      const captions={OBSERVED_PASS:['OBSERVADO · PASS','6 sessões e comparações consistentes'],INCOMPLETE:['EM ANDAMENTO','Autentique as aplicações restantes'],MISMATCH:['DIVERGÊNCIA','Há pelo menos uma comparação incompatível']};
+      const [title,description]=captions[data.result]||['INDETERMINADO','Revise os serviços'];
+      verdict.textContent=title;
+      verdict.className='pw-verdict '+(data.result==='OBSERVED_PASS'?'success':data.result==='MISMATCH'?'failure':'');
+      document.getElementById('pw-verdict-note').textContent=description;
+      message.textContent='Última consulta: '+new Date().toLocaleTimeString('pt-BR')+' · Evidência de sessão, não certificação do mecanismo pairwise.';
+      document.getElementById('pw-updated').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    }catch(error){message.textContent='Falha ao obter evidências. Confira o serviço 8180 e a rede Docker.';}
+    finally{busy=false;button.disabled=false;}
+  }
+  button.addEventListener('click',refresh);
+  window.addEventListener('focus',refresh);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
+  refresh();setInterval(()=>{if(!document.hidden)refresh();},20000);
+})();
+</script>
+{% endblock %}

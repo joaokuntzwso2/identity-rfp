@@ -1,0 +1,100 @@
+.env
+__pycache__/
+.pytest_cache/
+*.pyc
+generated/*
+!generated/.gitkeep
+.vscode/
+artifacts/results/*
+
+.venv-m3/
+
+# ========================================
+# Environment and local configuration
+# ========================================
+.env
+.env.*
+*.env
+*.env.*
+env/
+venv/
+.venv/
+ENV/
+
+# ========================================
+# Credentials, tokens and private keys
+# ========================================
+*secrets*.json
+*credentials*.json
+*.jwt
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.kdb
+
+# Sensitive local documentation
+/docs/USER_LOGIN_CREDENTIALS.md
+
+# ========================================
+# Generated runtime and provisioning data
+# ========================================
+/generated/
+
+# ========================================
+# Backups and temporary copies
+# ========================================
+*backup*
+*BACKUP*
+*.bak
+*.bak.*
+*.old
+*.orig
+*.save
+*.before_*
+*.pre_*
+*~
+*.swp
+*.swo
+
+# ========================================
+# Archives
+# ========================================
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# ========================================
+# Python
+# ========================================
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# ========================================
+# macOS and IDE
+# ========================================
+.DS_Store
+.AppleDouble
+.LSOverride
+.idea/
+.vscode/
+
+# ========================================
+# Local logs and runtime files
+# ========================================
+*.log
+logs/
+*.pid
+*.sqlite
+*.sqlite3
+

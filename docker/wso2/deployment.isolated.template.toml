@@ -1,0 +1,50 @@
+# Dedicated local WSO2 7.3 update-level 18 PoC with independent PostgreSQL schemas.
+# Generated; do not commit deployment.toml containing secrets.
+[server]
+hostname = "localhost"
+node_ip = "127.0.0.1"
+offset = 100
+base_path = "https://$ref{server.hostname}:${carbon.management.port}"
+
+[super_admin]
+username = "admin"
+password = "${IS_ADMIN_PASSWORD}"
+create_admin_account = true
+
+[user_store]
+type = "database_unique_id"
+
+[database.identity_db]
+type = "postgre"
+hostname = "identity-db"
+port = "5432"
+name = "wso2_identity"
+username = "${IS_DB_USER}"
+password = "${IS_DB_PASSWORD}"
+
+[database.shared_db]
+type = "postgre"
+hostname = "identity-db"
+port = "5432"
+name = "wso2_shared"
+username = "${IS_DB_USER}"
+password = "${IS_DB_PASSWORD}"
+
+# The 7.3.0.18 image ships a PKCS12 client truststore. Our derived image imports
+# the local sector CA into this same truststore for OIDC sector URI validation.
+[truststore]
+file_name = "client-truststore.p12"
+type = "PKCS12"
+password = "wso2carbon"
+
+[consent_mgt]
+enable_v2_api = true
+
+[console.flows.scopes]
+read = ["internal_flow_view", "internal_governance_view", "internal_consent_mgt_purpose_view"]
+
+# TEMPORARY LOCAL PoC COMPATIBILITY ONLY. IS 7.3 update levels disable Basic
+# management API authentication by default. Use scoped OAuth2 in production.
+[compatibility_setting.basic_auth.disable_basic_auth]
+default_value = false
+target_value = false

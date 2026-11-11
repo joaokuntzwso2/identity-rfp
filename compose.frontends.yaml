@@ -1,0 +1,140 @@
+# Six INDEPENDENT storefront containers with distinct origins and cookie names.
+services:
+  store-magalu-web:
+    build: .
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    command: ["uvicorn", "demo.storefront:app", "--host", "0.0.0.0", "--port", "8080"]
+    restart: unless-stopped
+    environment:
+      STORE_BRAND: magalu
+      STORE_CHANNEL: web
+      STORE_PUBLIC_URL: http://localhost:8181
+      IS_PUBLIC_URL: ${IS_PUBLIC_URL:-https://localhost:9543}
+      IS_INTERNAL_URL: https://is:9543
+      IS_TLS_VERIFY: ${IS_TLS_VERIFY:-false}
+      MANIFEST_FILE: /project/generated/storefront-manifest.json
+      DEMO_SESSION_SECRET: ${DEMO_SESSION_SECRET:?Configure .env}
+      CONSENT_DB_DSN: ${CONSENT_DB_DSN:?Configure .env}
+    volumes:
+      - ./generated/storefront-manifest.json:/project/generated/storefront-manifest.json:ro
+    ports:
+      - "127.0.0.1:8181:8080"
+    networks: [poc]
+    depends_on:
+      is: {condition: service_healthy}
+      db: {condition: service_healthy}
+  store-magalu-app:
+    build: .
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    command: ["uvicorn", "demo.storefront:app", "--host", "0.0.0.0", "--port", "8080"]
+    restart: unless-stopped
+    environment:
+      STORE_BRAND: magalu
+      STORE_CHANNEL: app
+      STORE_PUBLIC_URL: http://localhost:8182
+      IS_PUBLIC_URL: ${IS_PUBLIC_URL:-https://localhost:9543}
+      IS_INTERNAL_URL: https://is:9543
+      IS_TLS_VERIFY: ${IS_TLS_VERIFY:-false}
+      MANIFEST_FILE: /project/generated/storefront-manifest.json
+      DEMO_SESSION_SECRET: ${DEMO_SESSION_SECRET:?Configure .env}
+      CONSENT_DB_DSN: ${CONSENT_DB_DSN:?Configure .env}
+    volumes:
+      - ./generated/storefront-manifest.json:/project/generated/storefront-manifest.json:ro
+    ports:
+      - "127.0.0.1:8182:8080"
+    networks: [poc]
+    depends_on:
+      is: {condition: service_healthy}
+      db: {condition: service_healthy}
+  store-netshoes-web:
+    build: .
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    command: ["uvicorn", "demo.storefront:app", "--host", "0.0.0.0", "--port", "8080"]
+    restart: unless-stopped
+    environment:
+      STORE_BRAND: netshoes
+      STORE_CHANNEL: web
+      STORE_PUBLIC_URL: http://localhost:8183
+      IS_PUBLIC_URL: ${IS_PUBLIC_URL:-https://localhost:9543}
+      IS_INTERNAL_URL: https://is:9543
+      IS_TLS_VERIFY: ${IS_TLS_VERIFY:-false}
+      MANIFEST_FILE: /project/generated/storefront-manifest.json
+      DEMO_SESSION_SECRET: ${DEMO_SESSION_SECRET:?Configure .env}
+      CONSENT_DB_DSN: ${CONSENT_DB_DSN:?Configure .env}
+    volumes:
+      - ./generated/storefront-manifest.json:/project/generated/storefront-manifest.json:ro
+    ports:
+      - "127.0.0.1:8183:8080"
+    networks: [poc]
+    depends_on:
+      is: {condition: service_healthy}
+      db: {condition: service_healthy}
+  store-netshoes-app:
+    build: .
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    command: ["uvicorn", "demo.storefront:app", "--host", "0.0.0.0", "--port", "8080"]
+    restart: unless-stopped
+    environment:
+      STORE_BRAND: netshoes
+      STORE_CHANNEL: app
+      STORE_PUBLIC_URL: http://localhost:8184
+      IS_PUBLIC_URL: ${IS_PUBLIC_URL:-https://localhost:9543}
+      IS_INTERNAL_URL: https://is:9543
+      IS_TLS_VERIFY: ${IS_TLS_VERIFY:-false}
+      MANIFEST_FILE: /project/generated/storefront-manifest.json
+      DEMO_SESSION_SECRET: ${DEMO_SESSION_SECRET:?Configure .env}
+      CONSENT_DB_DSN: ${CONSENT_DB_DSN:?Configure .env}
+    volumes:
+      - ./generated/storefront-manifest.json:/project/generated/storefront-manifest.json:ro
+    ports:
+      - "127.0.0.1:8184:8080"
+    networks: [poc]
+    depends_on:
+      is: {condition: service_healthy}
+      db: {condition: service_healthy}
+  store-magalupay-web:
+    build: .
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    command: ["uvicorn", "demo.storefront:app", "--host", "0.0.0.0", "--port", "8080"]
+    restart: unless-stopped
+    environment:
+      STORE_BRAND: magalupay
+      STORE_CHANNEL: web
+      STORE_PUBLIC_URL: http://localhost:8185
+      IS_PUBLIC_URL: ${IS_PUBLIC_URL:-https://localhost:9543}
+      IS_INTERNAL_URL: https://is:9543
+      IS_TLS_VERIFY: ${IS_TLS_VERIFY:-false}
+      MANIFEST_FILE: /project/generated/storefront-manifest.json
+      DEMO_SESSION_SECRET: ${DEMO_SESSION_SECRET:?Configure .env}
+      CONSENT_DB_DSN: ${CONSENT_DB_DSN:?Configure .env}
+    volumes:
+      - ./generated/storefront-manifest.json:/project/generated/storefront-manifest.json:ro
+    ports:
+      - "127.0.0.1:8185:8080"
+    networks: [poc]
+    depends_on:
+      is: {condition: service_healthy}
+      db: {condition: service_healthy}
+  store-magalupay-app:
+    build: .
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    command: ["uvicorn", "demo.storefront:app", "--host", "0.0.0.0", "--port", "8080"]
+    restart: unless-stopped
+    environment:
+      STORE_BRAND: magalupay
+      STORE_CHANNEL: app
+      STORE_PUBLIC_URL: http://localhost:8186
+      IS_PUBLIC_URL: ${IS_PUBLIC_URL:-https://localhost:9543}
+      IS_INTERNAL_URL: https://is:9543
+      IS_TLS_VERIFY: ${IS_TLS_VERIFY:-false}
+      MANIFEST_FILE: /project/generated/storefront-manifest.json
+      DEMO_SESSION_SECRET: ${DEMO_SESSION_SECRET:?Configure .env}
+      CONSENT_DB_DSN: ${CONSENT_DB_DSN:?Configure .env}
+    volumes:
+      - ./generated/storefront-manifest.json:/project/generated/storefront-manifest.json:ro
+    ports:
+      - "127.0.0.1:8186:8080"
+    networks: [poc]
+    depends_on:
+      is: {condition: service_healthy}
+      db: {condition: service_healthy}

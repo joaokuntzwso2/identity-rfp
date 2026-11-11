@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Consentimento Direcional{% endblock %}
+{% block content %}
+<style>
+.m3-shell{max-width:1120px;margin:auto}.m3-kicker{font-size:11px;letter-spacing:.14em;font-weight:750;color:#3476a9;text-transform:uppercase}.m3-head{margin:12px 0 8px;line-height:1.12}.m3-muted{color:#64748b;line-height:1.6}.m3-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}.m3-panel{border:1px solid #d6e2eb;border-radius:16px;background:#fff;padding:22px;box-shadow:0 5px 22px rgba(31,54,80,.04)}.m3-panel h2{font-size:20px;margin:0 0 10px}.m3-label{display:block;margin:15px 0 6px;color:#334155;font-size:13px;font-weight:700}.m3-select{font-size:15px;padding:11px;width:100%;border:1px solid #a6b4c5;border-radius:8px;background:#fff;color:#132d43}.m3-btn{font-size:14px;padding:11px 16px;border:0;border-radius:8px;background:#176bb4;color:#fff;font-weight:700;cursor:pointer;margin:8px 5px 0 0}.m3-btn.secondary{background:#edf4fa;color:#145c94;border:1px solid #b7d1e5}.m3-btn.warn{background:#8c3c43}.m3-btn:disabled{opacity:.45;cursor:not-allowed}.m3-status{padding:14px;border-radius:9px;margin:12px 0;background:#eef5fa;border:1px solid #d1e3f1;color:#26455d;font-size:13px;white-space:pre-wrap;word-break:break-word}.m3-list{display:grid;gap:10px}.m3-card{border:1px solid #d8e3ee;border-radius:10px;padding:13px}.m3-card-top{display:flex;justify-content:space-between;gap:12px;align-items:center}.m3-pill{font-size:11px;font-weight:800;border-radius:50px;padding:5px 10px;background:#eff5f9;color:#455f71}.m3-pill.granted{background:#e0f7ec;color:#11744a}.m3-pill.revoked{background:#fee7e7;color:#9b2d34}.m3-id{font:12px ui-monospace,monospace;color:#52687e;margin-top:7px;word-break:break-all}.m3-panel pre{padding:15px;color:#dceaf7;background:#142c41;border-radius:10px;overflow:auto;max-height:280px;white-space:pre-wrap;word-break:break-all}.m3-row{display:flex;gap:6px;flex-wrap:wrap}.m3-callout{margin-top:22px;padding:17px;border-left:4px solid #4389b8;background:#f3f8fd;border-radius:6px;color:#29475b;font-size:13px}@media(max-width:800px){.m3-cols{grid-template-columns:1fr}}
+</style>
+<div class="m3-shell" data-csrf="{{ csrf }}">
+  <span class="m3-kicker">RFP 7.2 / 04 · D-01 · D-07 · Q6</span>
+  <h1 class="m3-head">Consentimento <em>direcional, verificável</em></h1>
+  <p class="m3-muted">Registre a ligação explícita entre duas sessões autenticadas em WSO2; negue acesso por padrão, conceda para uma direção e revogue. Cada chamada ao recurso verifica a <b>decisão atual</b> no PostgreSQL, mesmo após a emissão do token OIDC original.</p>
+  <div class="m3-cols">
+    <section class="m3-panel">
+      <h2>01. Vínculo e finalidade</h2>
+      <p class="m3-muted">Entre nos dois storefronts com o navegador atual. A associação é explícita; não há correlação automática por CPF ou username.</p>
+      <label class="m3-label" for="direction">Direção da solicitação</label>
+      <select id="direction" class="m3-select"><option value="magalu:netshoes">Magalu → Netshoes</option><option value="netshoes:magalu">Netshoes → Magalu</option><option value="magalu:magalupay">Magalu → MagaluPay</option><option value="magalupay:magalu">MagaluPay → Magalu</option></select>
+      <button id="link" class="m3-btn">Criar vínculo explícito</button>
+      <button id="refresh" class="m3-btn secondary">Atualizar sessões e consentimentos</button>
+      <div id="identity-state" class="m3-status" aria-live="polite">Verificando sessões autenticadas…</div>
+      <p class="m3-muted" style="font-size:12px">O vínculo só define o destinatário exato. <b>Não</b> concede permissão até a ação GRANTED.</p>
+    </section>
+    <section class="m3-panel">
+      <h2>02. Decisões ativas</h2>
+      <div id="links" class="m3-list"><p class="m3-muted">Consultando consentimentos…</p></div>
+    </section>
+    <section class="m3-panel" style="grid-column:1 / -1">
+      <h2>03. Evidência do resource server</h2>
+      <p class="m3-muted">Selecione um vínculo e use “Testar acesso” antes da concessão, depois dela e após a revogação. A API retorna HTTP 403 quando a permissão é inexistente ou revogada.</p>
+      <pre id="output">Nenhum teste executado.</pre>
+    </section>
+  </div>
+  <div class="m3-callout"><b>Limite de escopo:</b> esta demonstração valida a extensão de consentimento específica do cliente e sua autorização em uma API sintética. Não equivale a uma certificação da API nativa WSO2 Consent Management v2, nem prova que as duas contas autenticadas representam a mesma pessoa do mundo real.</div>
+</div>
+<script>
+(()=>{
+  'use strict';
+  const root=document.querySelector('.m3-shell');
+  const csrf=root.dataset.csrf;
+  const out=document.getElementById('output');
+  const links=document.getElementById('links');
+  const status=document.getElementById('identity-state');
+  function button(label,onClick,klass='secondary'){
+    const b=document.createElement('button');b.type='button';b.className='m3-btn '+klass;b.textContent=label;b.addEventListener('click',onClick);return b;
+  }
+  async function request(path,method='GET',body){
+    const headers={};if(method!=='GET') {headers['Content-Type']='application/json';headers['X-CSRF-Token']=csrf;headers['X-Idempotency-Key']=crypto.randomUUID()+crypto.randomUUID();}
+    const r=await fetch(path,{method,credentials:'same-origin',cache:'no-store',headers,body:body?JSON.stringify(body):undefined});
+    const text=await r.text();let data;try{data=JSON.parse(text)}catch{data={detail:text.slice(0,160)}}
+    return {http:r.status,...data};
+  }
+  function show(data){out.textContent=JSON.stringify(data,null,2)}
+  async function refresh(){
+    try{
+      const data=await request('/api/m3/consents');
+      status.textContent='Sessões ativas reconhecidas: '+(data.authenticated_brands||[]).join(', ')+(data.authenticated_brands?.length?'':' (nenhuma)');
+      links.replaceChildren();
+      if(!data.consents?.length){const p=document.createElement('p');p.className='m3-muted';p.textContent='Nenhum vínculo para as sessões autenticadas.';links.append(p);return}
+      data.consents.forEach(c=>{
+        const card=document.createElement('article');card.className='m3-card';
+        const top=document.createElement('div');top.className='m3-card-top';
+        const title=document.createElement('b');title.textContent=c.source_brand+' → '+c.recipient_brand;
+        const pill=document.createElement('span');pill.className='m3-pill '+c.state.toLowerCase();pill.textContent=c.state;
+        top.append(title,pill);card.append(top);
+        const id=document.createElement('div');id.className='m3-id';id.textContent=c.link_id;card.append(id);
+        const controls=document.createElement('div');controls.className='m3-row';
+        controls.append(button('Testar acesso',async()=>show(await request('/api/m3/resource/'+c.link_id))));
+        controls.append(button('Conceder',async()=>{show(await request('/api/m3/consents/'+c.link_id+'/granted','POST'));refresh()},'primary'));
+        controls.append(button('Revogar',async()=>{show(await request('/api/m3/consents/'+c.link_id+'/revoked','POST'));refresh()},'warn'));
+        controls.append(button('Auditoria',async()=>show(await request('/api/m3/audit/'+c.link_id))));
+        card.append(controls);links.append(card);
+      });
+    }catch(e){status.textContent='Falha na consulta: '+String(e)}
+  }
+  document.getElementById('link').addEventListener('click',async()=>{
+    const [source,recipient]=document.getElementById('direction').value.split(':');
+    const result=await request('/api/m3/link','POST',{source,recipient});show(result);await refresh();
+  });
+  document.getElementById('refresh').addEventListener('click',refresh);
+  refresh();
+})();
+</script>
+{% endblock %}

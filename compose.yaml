@@ -1,0 +1,84 @@
+name: magalu-ciam-poc
+services:
+  db:
+    image: postgres:16.6-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ciam}
+      POSTGRES_USER: ${POSTGRES_USER:-ciam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./consent/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [poc]
+  demo:
+    build: .
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      DEMO_PUBLIC_URL: ${DEMO_PUBLIC_URL:-http://localhost:8080}
+      IS_PUBLIC_URL: ${IS_PUBLIC_URL:-https://localhost:9443}
+      IS_INTERNAL_URL: ${IS_INTERNAL_URL:-https://host.docker.internal:9443}
+      IS_TLS_VERIFY: ${IS_TLS_VERIFY:-false}
+      CONSENT_DB_DSN: ${CONSENT_DB_DSN:-postgresql://ciam:ciam_dev_only@db:5432/ciam}
+      DEMO_SESSION_SECRET: ${DEMO_SESSION_SECRET:?Set DEMO_SESSION_SECRET}
+      DEMO_OPERATOR_KEY: ${DEMO_OPERATOR_KEY:?Set DEMO_OPERATOR_KEY}
+      MANIFEST_FILE: /project/generated/manifest.json
+    volumes:
+      - ./generated:/project/generated
+    ports:
+      - "127.0.0.1:${DEMO_HOST_PORT:-8080}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db: {condition: service_healthy}
+    networks: [poc]
+    restart: unless-stopped
+  sector:
+    image: nginx:1.27-alpine
+    ports:
+      - "127.0.0.1:${SECTOR_HOST_PORT:-8443}:443"
+    volumes:
+      - ./docker/sector/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./generated/tls:/etc/sector/tls:ro
+    depends_on:
+      demo: {condition: service_started}
+    networks:
+      poc:
+        aliases:
+          - sector-magalu
+          - sector-magalupay
+          - sector-magalufresh
+          - sector-netshoes
+  bootstrap:
+    build: .
+    profiles: [tools]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    command: ["python", "-m", "bootstrap.main"]
+    environment:
+      IS_PUBLIC_URL: ${IS_PUBLIC_URL:-https://localhost:9443}
+      IS_INTERNAL_URL: ${IS_INTERNAL_URL:-https://host.docker.internal:9443}
+      IS_ADMIN_USERNAME: ${IS_ADMIN_USERNAME:?Set IS_ADMIN_USERNAME}
+      IS_ADMIN_PASSWORD: ${IS_ADMIN_PASSWORD:?Set IS_ADMIN_PASSWORD}
+      IS_ADMIN_ACCESS_TOKEN: ${IS_ADMIN_ACCESS_TOKEN:-}
+      IS_TLS_VERIFY: ${IS_TLS_VERIFY:-false}
+      IS_EXPECTED_UPDATE_LEVEL: ${IS_EXPECTED_UPDATE_LEVEL:-18}
+      DEMO_PUBLIC_URL: ${DEMO_PUBLIC_URL:-http://localhost:8080}
+      SECTOR_URI_ROOT_TEMPLATE: ${SECTOR_URI_ROOT_TEMPLATE:?Set SECTOR_URI_ROOT_TEMPLATE in .env}
+      CONSENT_DB_DSN: ${CONSENT_DB_DSN:-postgresql://ciam:ciam_dev_only@db:5432/ciam}
+      MANIFEST_FILE: /project/generated/manifest.json
+    volumes:
+      - ./generated:/project/generated
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db: {condition: service_healthy}
+      demo: {condition: service_started}
+    networks: [poc]
+volumes:
+  db-data:
+networks:
+  poc: {}
