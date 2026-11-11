@@ -104,7 +104,7 @@ def view(request, notice=None, error=None, code=200):
     return TEMPLATES.TemplateResponse('site.html',{
         'request':request,'site':CATALOG[BRAND],'brand':BRAND,'channel':CHANNEL,
         'client':client,'principal':s['principal'],'csrf':s['csrf'],
-        'records':records,'notice':notice,'error':error,
+        'records':records,'notice':notice,'error':error,'s7_last_failed_tx':s.get('s7_last_failed_tx'),
         'SCOPE_CREATE':SCOPE_CREATE,'SCOPE_APPROVE':SCOPE_APPROVE,'ACR_TOTP':ACR_TOTP,
     }, status_code=code)
 
@@ -169,8 +169,17 @@ def authorize(s,client,disco,purpose='login',request_id=None):
             'state':state,'nonce':nonce,
             # Required for independently operated storefronts sharing an IdP.
             'prompt':('login consent' if BRAND == 'magalu' and CHANNEL == 'web' and purpose == 'login' else 'login'),'max_age':'0'}
-    if purpose=='approval':
+    if purpose in ('approval','s7_stepup'):
         params['acr_values']=ACR_TOTP
+    # S7-OIDC-ESSENTIAL-AUTH-TIME
+    if purpose == 's7_stepup':
+        # A fresh authentication needs evidence issued by WSO2 itself.
+        # OIDC Core requires auth_time for max_age=0; request it explicitly.
+        params['prompt'] = 'login'
+        params['max_age'] = '0'
+        params['claims'] = json.dumps(
+            {'id_token': {'auth_time': {'essential': True}}},
+            separators=(',', ':'))
     return redirect(disco['authorization_endpoint']+'?'+urlencode(params))
 
 
@@ -231,6 +240,8 @@ def callback(request:Request,code:str='',state:str='',error:str='',error_descrip
         scopes=set(str(tokens.get('scope','')).split())
         # These are granted scopes, never the scopes merely requested in authorize().
         display='Cliente autenticado'
+        userinfo_keys=[]
+        userinfo_observed=False
         userinfo=disco.get('userinfo_endpoint')
         if userinfo and tokens.get('access_token'):
             try:
@@ -239,6 +250,8 @@ def callback(request:Request,code:str='',state:str='',error:str='',error_descrip
                 if result.ok:
                     user=result.json()
                     if user.get('sub')==claims['sub']:
+                        userinfo_keys=sorted(str(k) for k in user.keys())
+                        userinfo_observed=True
                         display=str(user.get('given_name') or user.get('name') or
                                     user.get('preferred_username') or display)[:60]
             except (ValueError,requests.RequestException):
@@ -248,6 +261,48 @@ def callback(request:Request,code:str='',state:str='',error:str='',error_descrip
                       'client_id':client['client_id'],'display':display,
                       'scopes':sorted(scopes),'auth_time':claims.get('auth_time'),
                       'amr':claims.get('amr',[]),'acr':claims.get('acr','')}
+        newprincipal.update({
+            'id_token_claim_names': sorted(str(k) for k in claims.keys()),
+            'userinfo_claim_names': userinfo_keys,
+            'userinfo_observed': userinfo_observed,
+            'token_fingerprint': hashlib.sha256(tokens['id_token'].encode()).hexdigest()[:20],
+            'verified_id_token': True,
+        })
+        if pending['purpose']=='s7_stepup':
+            old=s.get('principal')
+            if not old or old['sub']!=newprincipal['sub'] or old['issuer']!=newprincipal['issuer']:
+                return view(request,error='Section 7: identidade alterada durante step-up.',code=403)
+            # Only OIDC claims from the already signature-verified ID token.
+            # Do not accept a UI TOTP challenge as proof when the claims disagree.
+            observed_methods=claims.get('amr')
+            method_names=observed_methods if isinstance(observed_methods,list) else []
+            fresh=claims.get('auth_time')
+            failures=[]
+            if claims.get('acr')!=ACR_TOTP:
+                failures.append('ACR_MISMATCH')
+            if 'totp' not in [str(v).lower() for v in method_names if isinstance(v,str)]:
+                failures.append('TOTP_AMR_MISSING')
+            if not isinstance(fresh,(int,float)):
+                failures.append('AUTH_TIME_MISSING')
+            elif fresh<pending['iat']-30:
+                failures.append('AUTH_TIME_STALE')
+            if failures:
+                # Preserve only a *failed* transaction pointer for a return link.
+                # Do not set s7_stepup_tx: downstream assurance must remain denied.
+                s['s7_last_failed_tx']=pending['request_id']
+                observed_acr=str(claims.get('acr') or 'MISSING')[:80]
+                observed_amr=','.join(str(v)[:35] for v in method_names if isinstance(v,str))[:140] or 'MISSING'
+                detail=('Section 7: WSO2 TOTP/AAL2 não comprovado. '
+                        + 'Falhas: '+','.join(failures)
+                        + '; acr observado='+observed_acr
+                        + '; amr observado='+observed_amr
+                        + '; auth_time='+('PRESENT' if isinstance(fresh,(int,float)) else 'MISSING')
+                        + '. Nenhum token ou segredo foi exibido.')
+                return view(request,error=detail,code=403)
+            s.pop('s7_last_failed_tx',None)
+            s['principal']=newprincipal
+            s['s7_stepup_tx']=pending['request_id']
+            return redirect('http://localhost:8180/m3/section7?tx='+pending['request_id'])
         if pending['purpose']=='approval':
             old=s.get('principal')
             if not old or old['sub']!=newprincipal['sub'] or old['issuer']!=newprincipal['issuer']:
@@ -327,3 +382,38 @@ def session_info(request:Request):
     return {'authenticated':True,'brand':BRAND,'channel':CHANNEL,
             'tenant':manifest()['clients'][CLIENT_KEY]['tenant_domain'],
             'sub':p['sub'],'scopes':p['scopes'],'acr':p['acr'],'amr':p['amr']}
+
+
+# RFP S7: never returns tokens or raw user attributes; only live session metadata.
+@app.get('/api/s7/evidence')
+def s7_evidence(request:Request):
+    p=active(request).get('principal')
+    if not p or p.get('verified_id_token') is not True:
+        return JSONResponse({'authenticated':False},status_code=401)
+    return JSONResponse({
+        'authenticated':True,'brand':BRAND,'channel':CHANNEL,
+        'tenant':manifest()['clients'][CLIENT_KEY]['tenant_domain'],
+        'sub':p['sub'],'issuer':p['issuer'],
+        'client_id':p['client_id'],'verified_id_token':True,
+        'token_fingerprint':p.get('token_fingerprint'),
+        'id_token_claim_names':p.get('id_token_claim_names',[]),
+        'userinfo_claim_names':p.get('userinfo_claim_names',[]),
+        'userinfo_observed':p.get('userinfo_observed',False),
+        'acr':p.get('acr'),'amr':p.get('amr',[]),
+        'auth_time':p.get('auth_time'),'s7_stepup_tx':active(request).get('s7_stepup_tx')
+    },headers={'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'})
+
+@app.get('/s7/stepup')
+def s7_stepup(request:Request,tx:str=''):
+    import uuid as _uuid
+    if BRAND!='magalupay' or CHANNEL!='web':
+        raise HTTPException(404,'This challenge is only for MagaluPay Web')
+    try:
+        if str(_uuid.UUID(tx))!=tx:raise ValueError('invalid tx')
+    except ValueError:
+        raise HTTPException(400,'Invalid transaction identifier') from None
+    s=active(request)
+    if not s.get('principal'):
+        raise HTTPException(401,'Authenticate in MagaluPay Web before starting the challenge')
+    client=manifest()['clients'][CLIENT_KEY]
+    return authorize(s,client,discovery(client['tenant_domain']),'s7_stepup',tx)

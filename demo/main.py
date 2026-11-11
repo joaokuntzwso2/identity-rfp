@@ -344,6 +344,10 @@ def auth_start(brand:str, channel:str):
 
 @app.get('/oidc/callback',response_class=HTMLResponse)
 def callback(request:Request):
+    from demo.poc_closure import seller_callback as _poc_seller_callback
+    new_response=_poc_seller_callback(request)
+    if new_response is not None:
+        return new_response
     """Former portal callback is retired: do not correlate users by claims."""
     return page(request,'error.html',problem='Portal legacy substituído',
                 details='As seis aplicações independentes gerenciam seu próprio login. Volte ao painel e inicie uma nova autenticação pela aplicação desejada.')
@@ -458,7 +462,7 @@ def logout_local(request:Request,csrf:str=Form()):
 def seller_home(request:Request):
     sess=session(request)
     if 'seller:web' not in sess.get('authenticated',{}):
-        return redirect('/auth/start/seller/web')
+        return redirect('/m3/completion?tab=b2b')
     seller=DB.business_access(sess.get('principal_id'))
     return page(request,'seller.html',brand='magalu',seller=seller,
                 auths=sess['authenticated'])
@@ -491,3 +495,10 @@ app.include_router(_m3_isolation_router)
 # Native Consent Management v2 evidence chapter — operator-only, no WSO2 reset.
 from demo.m3_native_lab import router as _m3_native_lab_router
 app.include_router(_m3_native_lab_router)
+# RFP Section 7.2 acceptance cockpit — additive, no API mock.
+from demo.s7_acceptance import router as _s7_acceptance_router
+app.include_router(_s7_acceptance_router)
+
+# Section 7 additive B2C/B2B/M2M acceptance cockpit.
+from demo.poc_closure import router as _poc_closure_router
+app.include_router(_poc_closure_router)

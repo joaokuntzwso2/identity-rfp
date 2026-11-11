@@ -19,7 +19,7 @@
  </div>
 </header>
 <main>
-{% if error %}<div class="notice error"><span>⚠</span><div><b>Operação interrompida</b><p>{{error}}</p></div></div>{% endif %}
+{% if error %}<div class="notice error"><span>⚠</span><div><b>Operação interrompida</b><p>{{error}}</p>{% if s7_last_failed_tx and 'Section 7:' in error %}<p><a href="http://localhost:8180/m3/section7?tx={{s7_last_failed_tx}}">Voltar ao Section 7 Acceptance Studio (transação preservada)</a></p>{% endif %}</div></div>{% endif %}
 {% if request.query_params.get('approved') %}<div class="notice success">✓ &nbsp; Aprovação confirmada após step-up TOTP no WSO2.</div>{% endif %}
 {% if request.query_params.get('created') %}<div class="notice success">✓ &nbsp; Solicitação criada e enviada à fila de aprovação.</div>{% endif %}
 {% if request.query_params.get('loggedout') %}<div class="notice info">Sessão encerrada somente nesta aplicação. O próximo login pedirá credenciais novamente.</div>{% endif %}
