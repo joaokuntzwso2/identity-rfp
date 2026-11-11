@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>Ana e Bruno · Delegação RFC 8693</title>
+<link rel="stylesheet" href="/static/m3_support_story.css">
+<script defer src="/static/m3_support_story.js"></script>
+</head>
+<body>
+<header><a href="/">✳ magalu <small>CIAM · EVIDENCE LAB</small></a><nav><a href="/m3/exchange">Workbench RFC 8693</a><a href="/m3/native-consent">Consent Management</a><a href="/">Início</a></nav></header>
+<main>
+<section class="hero"><p class="kicker">MILESTONE 3 · DEMONSTRAÇÃO AO VIVO</p><h1>Ana pede suporte.<br><em>Bruno pode consultar, não aprovar.</em></h1><p>Ana é a titular da solicitação sintética. Bruno é o agente de atendimento. Um backend recebe JWTs emitidos após login real, solicita ao WSO2 um token delegado e consulta uma API protegida. A identidade da titular permanece em <code>sub</code>, e a do agente aparece em <code>act.sub</code>.</p><p class="pill">WSO2 7.3.18 · RFC 8693 · JWT + JWKS · Audience · Escopos</p></section>
+<section class="card">
+<h2>01 · Preparar identidades reais</h2>
+<div class="steps"><article><h3>Ana · titular</h3><p>Capturar seu JWT com <code>requests:read</code>, por autenticação OIDC.</p><code>./scripts/m3-local.sh capture-subject --insecure-local</code><b id="ana">Aguardando</b></article><article><h3>Bruno · agente</h3><p>Capturar seu próprio JWT. O <code>act.sub</code> do token final deve apontar para Bruno.</p><code>./scripts/m3-local.sh capture-actor --insecure-local</code><b id="bruno">Aguardando</b></article></div>
+<p>Os JWTs são guardados somente em <code>generated/m3-tokens/</code>. Este navegador nunca os recebe.</p><button type="button" id="refresh">Atualizar preparação</button><span id="audience" class="hint">Audience: verificando</span>
+</section>
+<section class="card"><h2>02 · Executar operação de suporte usando WSO2</h2>
+<label for="key">DEMO_OPERATOR_KEY (somente nesta chamada)</label><input id="key" type="password" autocomplete="off" spellcheck="false" placeholder="Chave do operador local">
+<button id="run" type="button">Executar transação de atendimento real</button>
+<p class="hint">O servidor fará 3 trocas reais no endpoint OAuth do WSO2, validará o JWT assinado e enviará o token delegado por Authorization: Bearer à API de solicitações. A consulta retorna dados sintéticos, sem tocar em pedidos de produção.</p><div class="notice" id="notice" role="status">Nenhuma transação executada nesta sessão.</div>
+</section>
+<section class="card"><h2>03 · Linha do tempo da delegação</h2><div class="timeline">
+<article><small>1. Login e confiança</small><h3>WSO2 reconhece Ana e Bruno</h3><strong id="identity">PENDENTE</strong><p id="identity-detail">Assinaturas e identidades distintas ainda não verificadas.</p></article>
+<article><small>2. Emissão RFC 8693</small><h3>Bruno age em nome de Ana</h3><strong id="exchange">PENDENTE</strong><p id="exchange-detail">O token delegado deve preservar sub e act.sub, com escopo reduzido.</p></article>
+<article><small>3. Recurso real por HTTP</small><h3>Consultar solicitação de Ana</h3><strong id="read">PENDENTE</strong><p id="read-detail">GET protegido valida assinatura, issuer, audience e requests:read.</p></article>
+<article><small>4. Tentativa indevida</small><h3>Bruno tenta aprovar</h3><strong id="approve">PENDENTE</strong><p id="approve-detail">Uma aprovação requer requests:approve. A API deve devolver 403.</p></article>
+</div></section>
+<section class="card"><h2>04 · Evidência de aceite</h2><strong id="verdict">NÃO EXECUTADO</strong><p id="verdict-detail">PASS exige delegação real, leitura HTTP 200, recusa HTTP 403 e audience dedicado registrado e validado.</p><div class="actions"><a href="/api/m3/exchange/evidence" id="export">Exportar evidência sanitizada</a><a href="/m3/exchange">Ver detalhes técnicos no Workbench</a></div></section>
+<section class="card caveat"><h2>Limite da demonstração</h2><p>A API de solicitações é um recurso <strong>sintético</strong> com verificações JWT reais. A operação de aprovação é uma prova de autorização e <strong>não altera o estado de um pedido</strong>. Integrar ao banco real de pedidos e às regras de negócio é uma etapa distinta. Isso não é uma simulação do token exchange.</p></section>
+</main><footer>MAGALU · M3 · OPERAÇÃO LOCAL · Nenhuma credencial ou JWT é exibido</footer>
+</body></html>

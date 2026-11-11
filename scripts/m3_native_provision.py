@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, parse_qs, urlsplit
 
 from bootstrap.wso2 import WSO2
 from bootstrap.topology import ROOT_TENANTS
@@ -33,14 +33,63 @@ def scope_names(obj):
 
 
 def resource_entries(api):
-    resources=[]
-    for offset in range(0,500,100):
-        data,_=api.call('GET',f'/api/server/v1/api-resources?limit=100&offset={offset}')
-        chunk=data.get('APIResources')
-        if not isinstance(chunk,list): raise RuntimeError('WSO2 APIResources field unavailable')
+    """List WSO2 API resources using the documented cursor pagination contract."""
+    resources = []
+    cursor = None
+    seen = set()
+    for _ in range(100):
+        path = '/api/server/v1/api-resources?limit=100'
+        if cursor is not None:
+            path += '&after=' + quote(cursor, safe='')
+        data, response = api.call('GET', path)
+        if not isinstance(data, dict):
+            raise RuntimeError('WSO2 API-resource list returned non-object JSON')
+
+        # The documented spelling is APIResources. Some distributions use camelCase.
+        chunk = data.get('APIResources')
+        if chunk is None:
+            chunk = data.get('apiResources')
+        if chunk is None and data.get('totalResults') == 0:
+            chunk = []
+        if not isinstance(chunk, list):
+            keys = ', '.join(sorted(str(key) for key in data)) or '(none)'
+            headers = getattr(response, 'headers', {}) or {}
+            ctype = headers.get('Content-Type', '(unknown)')
+            redirected = bool(getattr(response, 'history', []))
+            raise RuntimeError(
+                'Unexpected WSO2 API-resource list response: '
+                f'JSON keys=[{keys}], content-type={ctype}, redirected={redirected}. '
+                'Check live WSO2 v2 configuration, API authentication, and response shape; '
+                'no secrets or response body were logged.'
+            )
+        if not all(isinstance(item, dict) for item in chunk):
+            raise RuntimeError('WSO2 API-resource list contains non-object entries')
         resources.extend(chunk)
-        if len(chunk)<100:break
-    return resources
+
+        links = data.get('links') or []
+        if not isinstance(links, list):
+            raise RuntimeError('WSO2 API-resource list links must be an array')
+        after = None
+        for link in links:
+            if not isinstance(link, dict) or not isinstance(link.get('href'), str):
+                continue
+            # Parse the documented cursor from links; never fetch arbitrary hrefs.
+            values = parse_qs(urlsplit(link['href']).query).get('after', [])
+            if len(values) == 1 and values[0] and values[0] != cursor:
+                after = values[0]
+                break
+        if after is None:
+            count = data.get('totalResults')
+            if isinstance(count, int) and not isinstance(count, bool) and count > len(resources):
+                raise RuntimeError('WSO2 API-resource pagination incomplete: missing forward cursor')
+            if len(chunk) == 100 and count is None:
+                raise RuntimeError('WSO2 API-resource page is full but has no next cursor')
+            return resources
+        if after in seen:
+            raise RuntimeError('WSO2 API-resource pagination cursor cycle detected')
+        seen.add(after)
+        cursor = after
+    raise RuntimeError('WSO2 API-resource listing exceeded 100 pages')
 
 
 def find_native_resources(api):
@@ -86,15 +135,52 @@ def authorize(api,app_id,resources):
             raise RuntimeError(f'Native {kind} API scope authorization readback failed')
 
 
-def listings(body,kind):
-    if isinstance(body,list):return body
-    if not isinstance(body,dict):raise RuntimeError('Unexpected native catalog response')
-    for key in (kind,'resources','Resources','items','data'):
-        value=body.get(key)
-        if isinstance(value,list):return value
-    # Empty successful catalog responses may be JSON {} depending on server version.
-    if not body:return []
-    raise RuntimeError(f'Native {kind} catalog layout is unsupported; inspect OpenAPI definition')
+def listings(body, kind):
+    """Normalize WSO2 v2 catalog list/empty-page responses; fail closed."""
+    list_fields = (kind, kind.capitalize(), 'list', 'List', 'items', 'Items',
+                   'resources', 'Resources')
+    metadata_fields = {'count', 'totalResults', 'total', 'startIndex',
+                       'offset', 'limit', 'pagination', 'links', '_links'}
+
+    def decode(obj, depth):
+        if isinstance(obj, list):
+            return obj
+        if not isinstance(obj, dict):
+            raise RuntimeError(f'Unexpected native {kind} catalog response type')
+        if not obj:
+            return []
+        unknown = set(obj) - set(list_fields) - metadata_fields - {'data', 'metadata'}
+        if unknown:
+            # Only names of fields are used for diagnostics, never values.
+            raise RuntimeError(
+                f'Native {kind} catalog unsupported fields: '
+                + ', '.join(sorted(str(k) for k in unknown)[:20]))
+
+        for key in (*list_fields, 'data'):
+            if key not in obj:
+                continue
+            value = obj[key]
+            if isinstance(value, list):
+                return value
+            if isinstance(value, dict) and depth < 2:
+                return decode(value, depth + 1)
+            if value is not None:
+                raise RuntimeError(f'Native {kind} catalog field {key} has unsupported type')
+
+        # WSO2 may omit the array entirely for an empty first page. Only
+        # explicit numeric zero metadata supports that interpretation.
+        counts = [obj[key] for key in ('count', 'totalResults', 'total') if key in obj]
+        for label in ('pagination', 'metadata'):
+            page = obj.get(label)
+            if isinstance(page, dict):
+                counts.extend(page[key] for key in ('count', 'total', 'totalResults') if key in page)
+        if counts and all(type(n) is int and n == 0 for n in counts):
+            return []
+        raise RuntimeError(
+            f'Native {kind} catalog layout unsupported; '
+            + 'top-level fields: [' + ', '.join(sorted(str(k) for k in obj)[:20]) + ']')
+
+    return decode(body, 0)
 
 
 def ensure_named(native,kind,name,payload,create_scope,view_scope):

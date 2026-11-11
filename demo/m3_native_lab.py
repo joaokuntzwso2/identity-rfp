@@ -162,6 +162,27 @@ def status(req:Request):
     return _reply(result)
 
 
+@router.post('/api/m3/native/live-state')
+def native_live_state(req:Request,body:LinkInput):
+    """Read both authorities independently, without mutating either store."""
+    _guard(req)
+    _,_,link=_check_link(req,body.link_id)
+    try:
+        info=_mirror_for(body.link_id,link)
+        native_ok,native_reason,record=_native_status(info)
+    except NativeProblem as exc:
+        return _reply({'result':'BLOCKED','reason':exc.code,
+                       'native_verified':False,'custom_state':link.get('action')},503)
+    custom=link.get('action') or 'NOT_GRANTED'
+    allowed,reason=dual_decision(custom,native_ok,native_reason)
+    state=record.get('state') if isinstance(record,dict) else None
+    return _reply({'schema':'magalu-m3-native-state-v1',
+        'native_verified':True,'native_state':state if state in ('ACTIVE','REVOKED','EXPIRED','PENDING') else 'NOT_AVAILABLE',
+        'native_active':native_ok,'native_reason':native_reason,
+        'custom_state':custom,'dual_gate_decision':'ALLOW' if allowed else 'DENY',
+        'dual_gate_reason':reason,'result':'LIVE_READBACK'})
+
+
 @router.post('/api/m3/native/preflight')
 def preflight(req:Request):
     _guard(req)
@@ -259,7 +280,11 @@ def reconcile(req:Request,body:LinkInput):
         changed=True
     _event('RECONCILE',{'native_reason':reason,'custom_revoked':changed,
                          'link_hash':_mirror_identity(link)[:16]})
-    result={'result':'RECONCILED' if not native_ok else 'IN_SYNC_IF_CUSTOM_ACTIVE',
+    outcome=('REVOKED_BY_RECONCILIATION' if changed else
+        'NO_ACTION_NATIVE_STILL_ACTIVE' if native_ok else
+        'NO_ACTION_CUSTOM_ALREADY_REVOKED' if before=='REVOKED' else
+        'NO_ACTION_CUSTOM_NOT_GRANTED')
+    result={'result':outcome,
         'native_active':native_ok,'native_reason':reason,
         'custom_before':before,'custom_revoked':changed,
         'never_restores_permission_automatically':True}

@@ -164,11 +164,11 @@ def authorize(s,client,disco,purpose='login',request_id=None):
                   'iat':int(time.time()),'request_id':request_id}
     params={'response_type':'code','client_id':client['client_id'],
             'redirect_uri':BASE+'/callback','scope':'openid '+
-            SCOPE_READ+' '+SCOPE_CREATE+' '+SCOPE_APPROVE,
+            ('profile email ' if BRAND == 'magalu' and CHANNEL == 'web' and purpose == 'login' else '') + SCOPE_READ+' '+SCOPE_CREATE+' '+SCOPE_APPROVE,
             'code_challenge':challenge,'code_challenge_method':'S256',
             'state':state,'nonce':nonce,
             # Required for independently operated storefronts sharing an IdP.
-            'prompt':'login','max_age':'0'}
+            'prompt':('login consent' if BRAND == 'magalu' and CHANNEL == 'web' and purpose == 'login' else 'login'),'max_age':'0'}
     if purpose=='approval':
         params['acr_values']=ACR_TOTP
     return redirect(disco['authorization_endpoint']+'?'+urlencode(params))

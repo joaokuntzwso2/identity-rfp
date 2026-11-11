@@ -67,6 +67,8 @@ async function protectedRead(target='read-out'){
   el('door-http').textContent=v.http||'—';
   output(target,v);return v;
 }
+el('live-state').addEventListener('click',()=>perform('live-state','live-state-out',
+  ()=>call('/api/m3/native/live-state',{link_id:requireLink()},true,[200,503])));
 el('read').addEventListener('click',()=>perform('read','read-out',()=>protectedRead()));
 el('after').addEventListener('click',()=>perform('after','revoke-out',()=>protectedRead('revoke-out')));
 el('revoke').addEventListener('click',()=>perform('revoke','revoke-out',()=>call('/api/m3/native/native-revoke',{

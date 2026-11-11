@@ -25,11 +25,26 @@
 <label class="check"><input type="checkbox" id="confirm-grant">Confirmo que Ana concedeu explicitamente Magalu → Netshoes no fluxo anterior.</label>
 <label class="check"><input type="checkbox" id="confirm-subject">Confirmo que as sessões Magalu e Netshoes são da mesma Ana cujo JWT público foi capturado.</label>
 <button id="native-create">Criar e verificar consentimento nativo</button><div id="native-create-out" class="out">Aguardando ação explícita.</div></div></div>
-<div class="act"><span class="num">04</span><div><h3>A API atravessa duas portas</h3><p>A mesma operação testa o ledger e o estado atual do consentimento nativo a cada chamada, sem aceitar um token somente porque foi emitido anteriormente.</p><button id="read">Testar acesso protegido</button><div class="doors"><div><span>WSO2 native</span><strong id="door-native">—</strong></div><div><span>Ledger direcional</span><strong id="door-custom">—</strong></div><div><span>API Netshoes</span><strong id="door-http">—</strong></div></div><div id="read-out" class="out">Resultado pendente.</div></div></div>
+<div class="act"><span class="num">04</span><div><h3>A API atravessa duas portas</h3><p>A mesma operação testa o ledger e o estado atual do consentimento nativo a cada chamada, sem aceitar um token somente porque foi emitido anteriormente.</p><button id="live-state" class="neutral">Ler estados atuais: native + ledger</button>
+        <div id="live-state-out" class="out">Readback ainda não executado.</div>
+        <button id="read">Testar acesso protegido</button><div class="doors"><div><span>WSO2 native</span><strong id="door-native">—</strong></div><div><span>Ledger direcional</span><strong id="door-custom">—</strong></div><div><span>API Netshoes</span><strong id="door-http">—</strong></div></div><div id="read-out" class="out">Resultado pendente.</div></div></div>
 <div class="act"><span class="num">05</span><div><h3>Revogação no WSO2 deve fechar a segunda porta</h3><p>O teste tenta a operação nativa de revogação e verifica a resposta por API. Se o método não estiver suportado neste build, ele ficará BLOQUEADO — nunca será marcado como concluído.</p><label class="check"><input type="checkbox" id="confirm-revoke">Confirmo que desejo revogar o registro nativo <em>somente</em> deste vínculo de teste.</label><button class="danger" id="revoke">Revogar no WSO2 (verificação obrigatória)</button>
 <button class="neutral" id="after">Retestar API após mudança</button><button class="neutral" id="reconcile">Reconciliar: revogar o ledger se o native estiver inativo</button><div id="revoke-out" class="out">Aguardando revogação real.</div>
 <p class="note"><a href="https://localhost:9543/myaccount" target="_blank" rel="noopener">WSO2 My Account</a> pode demonstrar consentimento de aplicação e política, mas o registro criado via API administrativa neste laboratório pode não aparecer como consentimento de aplicação no portal.</p></div></div>
 </section>
 <section class="chapter evidence"><div class="chapter-id">03 / ACEITE · EVIDÊNCIA SANITIZADA</div><h2>Separar configuração, sincronização e enforcement</h2><p>Relatório técnico com identificadores pseudonimizados. Não exibe tokens, client secrets, senha, subject SCIM ID nem cookies.</p><div class="actions"><button id="accept">Avaliar critérios de aceite</button><button class="neutral" id="export">Exportar evidência JSON</button></div><pre id="evidence-out">Aguardando.</pre>
 <div class="truth"><strong>Critério de PASS:</strong> registro nativo criado e lido de volta, acesso autorizado com os dois grants ativos, revogação nativa confirmada no estado REVOKED, acesso posterior negado e reconciliação documentada. A aprovação deste capítulo não substitui a avaliação de Consent Management no fluxo OIDC e My Account.</div></section>
+<section class="chapter"><div class="chapter-id">04 / SELF-SERVICE / OIDC · PROVA INDEPENDENTE</div>
+<h2>Consentimentos que Ana gerencia no My Account</h2>
+<p>O registro ADMIN_API_MIRROR acima não equivale ao consentimento de atributos OIDC.
+Para provar o autoatendimento, configure na aplicação Magalu Web do tenant magalu.demo
+atributos compartilhados, com <strong>Skip login consent desativado</strong>.
+Faça login novamente como Ana, aceite os atributos, confira-os em My Account,
+revogue-os e repita o login para observar a nova solicitação.</p>
+<p><a href="https://localhost:9543/console" target="_blank" rel="noopener">Console WSO2</a> ·
+<a href="https://localhost:9543/myaccount" target="_blank" rel="noopener">My Account</a> ·
+<a href="/m3/support-journey">Cenário de delegação Ana → Bruno</a></p>
+<div class="truth"><strong>Evidência separada:</strong> o fluxo de consentimento OIDC/self-service precisa de
+aceite e revogação observados no próprio portal. Esta seção não os marca como PASS automaticamente.</div>
+</section>
 </main><footer>MAGALU CIAM · RFP SECTION 7 · DEMONSTRAÇÃO DE ISOLAMENTO E GOVERNANÇA · WSO2 IS 7.3.18</footer></body></html>

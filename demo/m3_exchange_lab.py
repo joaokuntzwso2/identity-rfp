@@ -169,3 +169,15 @@ def exchange_evidence():
     response=_respond(report)
     response.headers['Content-Disposition']='attachment; filename="magalu-rfc8693-sanitized-evidence.json"'
     return response
+
+
+@router.get('/m3/support-journey',response_class=HTMLResponse)
+def support_journey_page(request:Request):
+    response=TEMPLATES.TemplateResponse('m3_support_story.html',{'request':request})
+    response.headers['Cache-Control']='no-store, private'
+    response.headers['X-Frame-Options']='DENY'
+    response.headers['Referrer-Policy']='no-referrer'
+    response.headers['Content-Security-Policy']=(
+        "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+        "object-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+    return response
